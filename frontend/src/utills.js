@@ -1,4 +1,4 @@
 
-const URI = 'http://localhost:8000';
+const URI = 'https://tms-2bk0.onrender.com';
 
 export default URI;

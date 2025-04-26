@@ -11,7 +11,7 @@ export const addUser = async (req, res) => {
         }
         const { username, email, password, mobile, branch, address, department, designation } = req.body;
 
-        const imageUrl = `${process.env.URI}/file/${req.file.originalname}`;
+        const imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const existUsername = await User.findOne({ username });
@@ -91,7 +91,7 @@ export const updateUser = async (req, res) => {
             userUpdated = true;
         }
         if (req?.file) {
-            const imageUrl = `${process.env.URI}/file/${req.file.originalname}`;
+            const imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
             const profile = await User.findByIdAndUpdate(userId, { profile: imageUrl });
             userUpdated = true;
         }

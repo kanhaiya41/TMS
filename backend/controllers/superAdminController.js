@@ -16,7 +16,7 @@ export const makeAdmin = async (req, res) => {
             });
         }
 
-        const imageUrl = `${process.env.URI}/file/${req.file.originalname}`;
+        const imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const existUsername = await User.findOne({ username });
