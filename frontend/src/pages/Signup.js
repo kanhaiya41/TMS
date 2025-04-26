@@ -36,7 +36,7 @@ function Signup() {
             alert('Please fill out all Fields!')
             return false;
         }
-        else if (formData?.password?.length > 6) {
+        else if (!formData?.password?.length > 6) {
             alert('Password must have at least 6 letters!')
             return false;
         }
