@@ -2,10 +2,17 @@ import User from "../models/userModel.js";
 import UserRequests from "../models/reqModel.js";
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import UserEditRequests from "../models/userReqModel.js";
+import SuperAdmin from "../models/superAdminModel.js";
+import Admin from "../models/adminModel.js";
+import Manager from "../models/managerModel.js";
+import TeamLeader from "../models/teamLeaderModel.js";
+import nodemailer from 'nodemailer';
 
 export const findUserForForgetPass = async (req, res) => {
     try {
         const email = req.params.email;
+        const designation = req.params.designation;
         const existReq = await UserRequests.findOne({ email });
         if (existReq) {
             res.status(400).json({
@@ -15,8 +22,22 @@ export const findUserForForgetPass = async (req, res) => {
             });
         }
         else {
-            const user = await User.findOne({ email }).select('-password');
-            console.log(user)
+            let user;
+            if (designation === 'superadmin') {
+                user = await SuperAdmin.findOne({ email }).select('-password');
+            }
+            else if (designation === 'admin') {
+                user = await Admin.findOne({ email }).select('-password');
+            }
+            else if (designation === 'Manager') {
+                user = await Manager.findOne({ email }).select('-password');
+            }
+            else if (designation === 'Team Leader') {
+                user = await TeamLeader.findOne({ email }).select('-password');
+            }
+            else {
+                user = await User.findOne({ email }).select('-password');
+            }
             if (!user) {
                 res.status(404).json({
                     success: false,
@@ -49,28 +70,91 @@ export const reqForUpdatePassword = async (req, res) => {
     }
 }
 
+export const sendMail = async (req, res) => {
+    const { email, code } = req.body;
+    //set nodemailer transport
+    const transtporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.USER_EMAIL,
+            pass: process.env.EMAIL_PASS
+        }
+    });
+    //body of mail
+    const mailBody = {
+        from: process.env.USER_EMAIL,
+        to: email,
+        subject: 'Code For Update Account information',
+        html: `<h1>${code}</h1>`,
+    };
+    try {
+        let info = await transtporter.sendMail(mailBody);
+        res.status(200).json({
+            success: true,
+            message: 'we send a code on your mail! please confirm'
+        });
+    } catch (error) {
+        console.error('error sending mail:' + error);
+        res.status(500).send("error sending mail:" + error.message);
+    }
+};
+
+export const updateForgetPassword = async (req, res) => {
+    try {
+        const hashedPassword=await bcrypt.hash(req.body.password,10);
+        const admin = await Admin.findOneAndUpdate({email: req.body.email},{password:hashedPassword});
+        const superAdmin = await SuperAdmin.findOneAndUpdate({email: req.body.email},{password:hashedPassword});
+        if(admin || superAdmin)
+        {
+            return res.status(200).json({
+                success: true,
+                message: 'Password Updated Succesfully!😊'
+            })
+        }
+    } catch (error) {
+        console.log("while updating forget password", error);
+    }
+}
+
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
+        const { email, password, designation } = req.body;
+        if (!email || !password || !designation) {
             return res.status(401).json({
                 success: false,
                 message: 'something is missing,Please cheack!'
             });
         }
-        const user = await User.findOne({ email });
+        let user;
+        if (designation === 'superadmin') {
+            user = await SuperAdmin.findOne({ email });
+        }
+        else if (designation === 'admin') {
+            user = await Admin.findOne({ email });
+        }
+        else if (designation === 'Manager') {
+            user = await Manager.findOne({ email });
+        }
+        else if (designation === 'Team Leader') {
+            user = await TeamLeader.findOne({ email });
+        }
+        else {
+            user = await User.findOne({ email });
+        }
+
+
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: 'Incorrect email or password!'
+                message: 'Incorrect Credentials!'
             });
         }
-        
+
         const isPasswordMatch = await bcrypt.compare(password, user.password);
         if (!isPasswordMatch) {
             return res.status(401).json({
                 success: false,
-                message: 'Incorrect email or password!'
+                message: 'Incorrect Password!'
             });
         }
 
@@ -108,7 +192,7 @@ export const logout = async (req, res) => {
 export const verifySuperAdmin = async (req, res) => {
     try {
         const designation = 'superadmin';
-        const superadmin = await User.findOne({ designation });
+        const superadmin = await SuperAdmin.findOne();
         if (superadmin) {
             return res.status(200).json({
                 success: true
@@ -121,5 +205,99 @@ export const verifySuperAdmin = async (req, res) => {
         }
     } catch (error) {
         console.log("while verify super admin", error);
+    }
+}
+
+export const reqToEditProfile = async (req, res) => {
+    try {
+        const request = await UserEditRequests(req.body);
+        const saveReq = await request.save();
+        res.status(200).json({
+            success: true,
+            message: 'Request Sent Successfully! 😊'
+        })
+    } catch (error) {
+        console.log('while Requesting for edit profile', error);
+    }
+}
+
+export const fetchUpdateProfileRequests = async (req, res) => {
+    try {
+        const requests = await UserEditRequests.find();
+        if (requests) {
+            return res.status(200).json({
+                success: true,
+                requests
+            });
+        }
+        else {
+            return res.status(400).json({
+                success: false,
+                message: `No Requests from Users!`
+            });
+        }
+    } catch (error) {
+        console.log('while fetching update profile requests', error);
+    }
+}
+
+export const updateStatustoProfileUpdateRequest = async (req, res) => {
+    try {
+        const request = await UserEditRequests.findByIdAndUpdate(req?.body?.requestId, { status: req?.body?.status });
+        if (request) {
+            return res.status(200).json({
+                success: true,
+                message: 'Request Accepted'
+            });
+        }
+        else {
+            return res.status(400).json({
+                success: true,
+                message: 'Status not changed!'
+            });
+        }
+    } catch (error) {
+        console.log('while updating status in user request', error);
+    }
+}
+
+export const superAdminSignUp = async (req, res) => {
+    try {
+        const { username, email, password, mobile, branch, address, department, designation } = req.body;
+        let imageUrl;
+        if (req.file) {
+            imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const existUsername = await SuperAdmin.findOne({ username });
+        const existEmail = await SuperAdmin.findOne({ email });
+        const existMobile = await SuperAdmin.findOne({ mobile });
+        if (existUsername) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username already exist!'
+            });
+        }
+        if (existEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already exist!'
+            });
+        }
+        if (existMobile) {
+            return res.status(400).json({
+                success: false,
+                message: 'Duplicate Mobile number!'
+            });
+        }
+        const user = await SuperAdmin({ ...req.body, profile: imageUrl, password: hashedPassword });
+        const us = await user.save();
+        res.status(200).json({
+            success: true,
+            message: 'User created Successfully🤗',
+            // us
+        })
+    } catch (error) {
+        console.log('while make super admin', error);
     }
 }

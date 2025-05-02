@@ -13,7 +13,7 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
     description: initialData?.description || '',
     manager: initialData?.manager || '',
     teamleader: initialData?.teamleader || '',
-    branch: user?.branch
+    branch: initialData?.branch || ''
   });
 
   const [errors, setErrors] = useState({});
@@ -47,6 +47,10 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
       newErrors.description = 'Description is required';
     }
 
+    if (!formData.branch.trim()) {
+      newErrors.branch = 'Branch is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -65,7 +69,8 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
           name: '',
           description: '',
           manager: '',
-          teamleader: ''
+          teamleader: '',
+          branch: ''
         })
         fetchDepartment();
         toast.success(res?.data?.message);
@@ -85,7 +90,7 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
     try {
       e.preventDefault();
 
-      const res = await axios.post(`${URI}/admin/updatedepartment`, { name: formData?.name, description: formData?.description, manager: formData?.manager, teamleader: formData?.teamleader, departmentid: initialData?._id }, {
+      const res = await axios.post(`${URI}/admin/updatedepartment`, { name: formData?.name, description: formData?.description, manager: formData?.manager, teamleader: formData?.teamleader, branch: formData?.branch, departmentid: initialData?._id }, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -95,7 +100,8 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
           name: '',
           description: '',
           manager: '',
-          teamleader: ''
+          teamleader: '',
+          branch: ''
         });
         toast.success(res?.data?.message);
       }).catch(err => {
@@ -140,30 +146,32 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
           rows="3"
         ></textarea>
         {errors.description && <div className="text-error text-sm mt-1">{errors.description}</div>}
+
       </div>
 
       <div className="form-group">
-        <label htmlFor="managerId" className="form-label">Department Manager</label>
+        <label htmlFor="branch" className="form-label">Branch</label>
         <select
-          id="managerId"
-          name="managerId"
+          id="branch"
+          name="branch"
           className="form-select"
-          value={formData.manager}
+          value={formData?.branch}
           onChange={handleChange}
         >
-          <option value="" disabled selected>Select a manager (optional)</option>
-          {allUsers?.map(manager => (
+          <option value="" disabled selected>Select a Branch</option>
+          {user?.branches?.map(branch => (
             <>
               {
-                manager?.designation === 'Manager' &&
-                <option key={manager?.username} value={manager?.username}>
-                  {manager.username} - {manager.department}
+                <option key={branch} value={branch}>
+                  {branch}
                 </option>
               }
             </>
 
           ))}
         </select>
+        {errors.branch && <div className="text-error text-sm mt-1">{errors.branch}</div>}
+
       </div>
 
       <div className="form-group">
@@ -172,18 +180,17 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
           id="teamleader"
           name="teamleader"
           className="form-select"
-          value={formData.teamleader}
+          value={formData?.teamleader}
           onChange={handleChange}
         >
-          <option value="" disabled selected>Select a manager (optional)</option>
-          {allUsers?.map(manager => (
+          <option value="" disabled selected >Select a Team Leader (optional)</option>
+          {allUsers?.map(TL => (
             <>
-              {
-                manager?.designation === 'Team Leader' &&
-                <option key={manager?.username} value={manager?.username}>
-                  {manager.username} - {manager.department}
+              {(initialData?.teamleader || (!TL?.department && TL?.branch === formData?.branch)) && (
+                <option key={TL?.username} value={TL?.username}>
+                  {TL?.username} - {TL?.branch}
                 </option>
-              }
+              )}
             </>
 
           ))}

@@ -15,12 +15,16 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
     email: initialData?.email || '',
     mobile: initialData?.mobile || '',
     address: initialData?.address || '',
-    department: initialData?.department || user?.department || ''
+    department: initialData?.department || user?.department || '',
+    branches: initialData?.branches || [],
+    branch: initialData?.branch || user?.branch || '',
+    name: initialData?.name || ''
   });
 
   const [profile, setProfile] = useState(null);
 
   const [errors, setErrors] = useState({});
+  const [managers, setManagers] = useState([]);
 
   const [branches, setBranches] = useState([]);
   const fetchBranches = async () => {
@@ -66,9 +70,38 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
     }
   }
 
+  //fetch managers
+  const fetchAllManagers = async () => {
+    try {
+      const res = await axios.get(`${URI}/admin/managers`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        const matchedExecutives = res?.data?.allBranchesData?.filter((executive) =>
+          user?.branches.includes(executive?.branch)
+        );
+        setManagers(matchedExecutives);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+    } catch (error) {
+      console.log("while fetching all Users data", error);
+    }
+  }
+
   useEffect(() => {
     fetchBranches();
     fetchDepartment();
+    if (user?.designation === 'admin') {
+      fetchAllManagers();
+    }
   }, []);
 
   const handleChange = (e) => {
@@ -87,8 +120,32 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
     }
   };
 
+  const handleCheckboxChange = (e) => {
+    const value = e.target.value;
+    const isChecked = e.target.checked;
+
+    setFormData(prevFormData => {
+      const currentBranches = prevFormData.branches || [];
+
+      if (isChecked) {
+        return {
+          ...prevFormData,
+          branches: [...currentBranches, value]
+        };
+      } else {
+        return {
+          ...prevFormData,
+          branches: currentBranches.filter(val => val !== value)
+        };
+      }
+    });
+
+
+  };
+
+
   const passValidation = () => {
-    if (!formData?.username || !formData?.email || !formData?.password || !formData?.cpassword || !formData?.mobile || !formData?.address || !profile) {
+    if (!formData?.username || !formData?.email || !formData?.password || !formData?.cpassword || !formData?.mobile || !formData?.address) {
       toast.error('Please fill out all Fields!')
       return false;
     }
@@ -167,48 +224,82 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
         formdata.append('name', formData?.name);
         formdata.append('password', formData?.password);
         formdata.append('mobile', formData?.mobile);
-        formdata.append('branch', formData?.branch ? formData?.branch : user?.branch);
-        formdata.append('department', formData?.department);
         formdata.append('address', formData?.address);
+        formdata.append('profile', profile);
         formdata.append('designation', designation);
-        if (profile) {
-          formdata.append('profile', profile);
+
+        if (designation === 'Team Leader' || designation === 'Executive') {
+          formdata.append('department', formData?.department);
         }
-        else {
-          alert('not found');
-        }
-        const res = await axios.post(`${URI}/admin/adduser`, formdata, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }).then(res => {
-          fetchAllUsers();
-          setFormData({
-            username: '',
-            email: '',
-            name: '',
-            password: '',
-            cpassword: '',
-            mobile: '',
-            department: '',
-            address: ''
+
+        if (designation === 'admin') {
+          formData?.branches.forEach(branch => {
+            formdata.append('branches', branch);
           });
-          setProfile(null);
-          toast.success(res?.data?.message);
-        }).catch(err => {
-          // Handle error and show toast
-          if (err.response && err.response.data && err.response.data.message) {
-            toast.error(err.response.data.message); // For 400, 401, etc.
-          } else {
-            toast.error("Something went wrong");
-          }
-        });
+          const res = await axios.post(`${URI}/superadmin/makeadmin`, formdata, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }).then(res => {
+            fetchAllUsers();
+            setFormData({
+              username: '',
+              email: '',
+              name: '',
+              password: '',
+              cpassword: '',
+              mobile: '',
+              department: '',
+              address: ''
+            });
+            setProfile(null);
+            toast.success(res?.data?.message);
+          }).catch(err => {
+            // Handle error and show toast
+            if (err.response && err.response.data && err.response.data.message) {
+              toast.error(err.response.data.message); // For 400, 401, etc.
+            } else {
+              toast.error("Something went wrong");
+            }
+          });
+        }
+
+
+        if (designation === 'Manager' || designation === 'Executive' || designation === 'Team Leader') {
+          formdata.append('branch', formData?.branch || user?.branch);
+          const res = await axios.post(`${URI}/admin/adduser`, formdata, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }).then(res => {
+            // fetchAllUsers();
+            setFormData({
+              username: '',
+              email: '',
+              name: '',
+              password: '',
+              cpassword: '',
+              mobile: '',
+              branch: '',
+              address: ''
+            });
+            setProfile(null);
+            toast.success(res?.data?.message);
+          }).catch(err => {
+            // Handle error and show toast
+            if (err.response && err.response.data && err.response.data.message) {
+              toast.error(err.response.data.message); // For 400, 401, etc.
+            } else {
+              toast.error("Something went wrong");
+            }
+          });
+        }
+
       }
     } catch (error) {
       console.log("while make an admin", error);
     }
   }
-
 
   const updateUser = async (e) => {
     try {
@@ -224,23 +315,21 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
         formdata.append('name', formData?.name);
         formdata.append('password', formData?.password);
         formdata.append('mobile', formData?.mobile);
-        formdata.append('branch', formData?.branch ? formData?.branch : user?.branch);
-        formdata.append('department', formData?.department);
         formdata.append('address', formData?.address);
+        formdata.append('profile', profile);
         formdata.append('designation', designation);
+
+        formdata.append('branches', formData?.branches);
+        formdata.append('department', formData?.department);
+        formdata.append('branch', formData?.branch);
         formdata.append('userid', initialData?._id);
-
-        if (profile) {
-          formdata.append('profile', profile);
-
-        }
 
         const res = await axios.post(`${URI}/admin/updateuser`, formdata, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
         }).then(res => {
-          fetchAllUsers();
+          // fetchAllUsers();
           setFormData({
             username: '',
             email: '',
@@ -301,22 +390,19 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
         {errors?.email && <div className="text-error text-sm mt-1">{errors?.email}</div>}
       </div>
 
-      {
-        user?.designation === 'superadmin' &&
-        <div className="form-group">
-          <label htmlFor="name" className="form-label">Enter Full Name</label>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            className={`form-control ${errors.name ? 'border-error' : ''}`}
-            value={formData?.name}
-            onChange={handleChange}
-            placeholder="Enter Full Name"
-          />
-          {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
-        </div>
-      }
+      <div className="form-group">
+        <label htmlFor="name" className="form-label">Enter Full Name</label>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          className={`form-control ${errors.name ? 'border-error' : ''}`}
+          value={formData?.name}
+          onChange={handleChange}
+          placeholder="Enter Full Name"
+        />
+        {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
+      </div>
 
       <div className="form-group">
         <label htmlFor="password" className="form-label">Password</label>
@@ -364,15 +450,19 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
         user?.designation === 'superadmin' &&
         <div className="form-group">
           <label htmlFor="branch" className="form-label">Branch</label>
-          <select onChange={handleChange} name="branch" id="branch" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
-            <option value="" disabled selected>--Branch--</option>
+          <div className='deptcheckbox'>
             {
               branches?.map((curElem) => (
-                <option value={curElem?.name}>{curElem?.name}</option>
+                <>
+                  {
+                    !curElem?.admin &&
+                    <p>{curElem?.name} <input type="checkbox" value={curElem?.name} onChange={handleCheckboxChange} name='department' /></p>
+                  }
+                </>
               ))
             }
+          </div>
 
-          </select>
           {errors?.branch && <div className="text-error text-sm mt-1">{errors?.branch}</div>}
         </div>
       }
@@ -406,21 +496,58 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
         />
         {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
       </div>
+
       {
-        !user?.department && user?.designation !== 'superadmin' ?
-          <div className="form-group">
-            <label htmlFor="department" className="form-label">Department</label>
-            <select onChange={handleChange} name="department" id="department" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
-              <option value="" disabled selected>--Department--</option>
-              {
-                departments?.map((curElem) => (
-                  <option value={curElem?.name}>{curElem?.name}</option>
-                ))
-              }
-            </select>
-            {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
-          </div> : <br />
+        user?.designation === 'admin' &&
+        <div className="form-group">
+          <label htmlFor="branch" className="form-label">Branch</label>
+          <select onChange={handleChange} name="branch" id="branch" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
+            <option value="" disabled selected>--Branch--</option>
+            {
+              user?.branches?.map((curElem) => {
+                const isBranchAssigned = managers.some((man) => man.branch === curElem);
+
+                if (!isBranchAssigned || designation !== 'Manager') {
+                  return (
+                    <option key={curElem} value={curElem}>
+                      {curElem}
+                    </option>
+                  );
+                }
+                return null;
+              })
+            }
+
+          </select>
+          {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
+        </div>
       }
+      {
+        user?.designation !== 'Team Leader' &&
+        <>
+          {
+            (designation === 'Executive' || designation === 'Team Leader') &&
+            <div className="form-group">
+              <label htmlFor="department" className="form-label">Department</label>
+              <select onChange={handleChange} name="department" id="department" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
+                <option value="" disabled selected>--Department--</option>
+                {
+                  departments?.map((curElem) => (
+                    curElem?.branch === formData?.branch &&
+                      (designation === 'Executive' || !curElem?.teamleader) ? (
+                      <option key={curElem?.name} value={curElem?.name}>
+                        {curElem?.name}
+                      </option>
+                    ) : null
+                  ))
+                }
+              </select>
+              {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
+            </div>
+          }
+        </>
+      }
+
 
       <div className="flex gap-2 justify-end mt-4">
         <button

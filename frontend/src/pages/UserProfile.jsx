@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import mockPasswordRequests from '../data/mockPasswordRequests';
 import { useSelector } from 'react-redux';
+import axios from 'axios';
+import URI from '../utills'
+import toast from 'react-hot-toast';
 
 function UserProfile() {
 
@@ -18,6 +21,8 @@ function UserProfile() {
     confirmPassword: ''
   });
   const [errors, setErrors] = useState({});
+
+  const [userRequest, setUserRequest] = useState({});
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,30 +163,139 @@ function UserProfile() {
     });
   };
 
+  const fetchEditProfileRequest = async () => {
+    try {
+      const res = await axios.get(`${URI}/auth/getupdateprofilerequests`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        setUserRequest(r?.data?.requests?.filter((req) => req?.email === user?.email));
+        console.log('userid=', user?.email, 'requestId=', r?.data?.requests);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while fetching edit profile request', error);
+    }
+  }
+
+  useEffect(() => {
+    fetchEditProfileRequest();
+  }, []);
+
+  const ReqToEditProfile = async (reqto, status) => {
+    try {
+      const data = {
+        username: user?.username,
+        email: user?.email,
+        mobile: user?.mobile,
+        branch: user?.branch,
+        department: user?.department,
+        address: user?.address,
+        profile: user?.profile,
+        designation: user?.designation,
+        reqto: reqto,
+        status: status
+      }
+      const res = await axios.post(`${URI}/auth/reqforupdateprofile`, data, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        fetchEditProfileRequest();
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while requesting for edit profile', error);
+    }
+  }
+
   return (
     <div className="animate-fade">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">User Profile</h2>
-        {!isEditing && !showPasswordForm && (
-          <div className="flex gap-2">
-            <button
-              className="btn btn-outline"
-              onClick={() => setShowPasswordForm(true)}
-            >
-              Change Password
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => setIsEditing(true)}
-            >
-              Edit Profile
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="grid grid-2 gap-4">
         {/* Profile Information */}
+        <div className="card">
+
+          <div className="card-body">
+            <div className="flex items-center justify-center mb-4">
+
+              <img
+                className="user-avatar" style={{
+                  width: '80px',
+                  height: '80px',
+                  fontSize: '2rem',
+                  backgroundColor: 'var(--color-primary)'
+                }}
+                src={user?.profile ? user?.profile : '/img/admin.png'} alt="PF" />
+
+            </div>
+
+            <div className="text-center mb-4">
+              <h3 className="text-xl font-bold">{user?.username} {user?.name ? <>({user?.name})</> : ''}</h3>
+              {/* {
+                  user?.name!=="" && <p className="text-muted">{user?.name}</p>
+                } */}
+              <p className="text-muted">{user?.email}</p>
+            </div>
+
+            <div className="border-t border-gray-200 pt-4">
+              <div className="grid grid-2 gap-3">
+                <div>
+                  <p className="text-sm text-muted">Role</p>
+                  <p className="font-medium">
+                    {user?.designation?.charAt(0).toUpperCase() + user?.designation?.slice(1)}
+                  </p>
+                </div>
+                {user?.department && (
+                  <div>
+                    <p className="text-sm text-muted">Department</p>
+                    <p className="font-medium">{user?.department}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-muted">Joined Date</p>
+                  <p className="font-medium">{formatDate(user?.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted">Address</p>
+                  <p className="font-medium">
+                    {user?.address}
+                  </p>
+                </div>
+                {user?.branch && (
+                  <div>
+                    <p className="text-sm text-muted">Branch</p>
+                    <p className="font-medium">{user?.branch}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm text-muted">Mobile Number</p>
+                  <p className="font-medium">{user?.mobile}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Additional Information */}
         <div className="card">
           {isEditing ? (
             <div className="card-body">
@@ -306,139 +420,124 @@ function UserProfile() {
               </form>
             </div>
           ) : (
-            <div className="card-body">
-              <div className="flex items-center justify-center mb-4">
-
-                <img
-                  className="user-avatar" style={{
-                    width: '80px',
-                    height: '80px',
-                    fontSize: '2rem',
-                    backgroundColor: 'var(--color-primary)' }}
-                  src={ user?.profile} alt="" />
-
+            <>
+              <div className="card-header">
+                <h3>Activity Summary</h3>
               </div>
-
-              <div className="text-center mb-4">
-                <h3 className="text-xl font-bold">{user?.username} { user?.name ? <>({user?.name})</>:''}</h3>
-                {/* {
-                  user?.name!=="" && <p className="text-muted">{user?.name}</p>
-                } */}
-                <p className="text-muted">{user?.email}</p>
-              </div>
-
-              <div className="border-t border-gray-200 pt-4">
-                <div className="grid grid-2 gap-3">
-                  <div>
-                    <p className="text-sm text-muted">Role</p>
-                    <p className="font-medium">
-                      {user?.designation?.charAt(0).toUpperCase() + user?.designation?.slice(1)}
-                    </p>
-                  </div>
-                  {user?.department && (
-                    <div>
-                      <p className="text-sm text-muted">Department</p>
-                      <p className="font-medium">{user?.department}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-muted">Joined Date</p>
-                    <p className="font-medium">{formatDate(user?.createdAt)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted">Address</p>
-                    <p className="font-medium">
-                      {user?.address}
-                    </p>
-                  </div>
-                  {user?.branch && (
-                    <div>
-                      <p className="text-sm text-muted">Branch</p>
-                      <p className="font-medium">{user?.branch}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-muted">Mobile Number</p>
-                    <p className="font-medium">{user?.mobile}</p>
-                  </div>
+              <div className="card-body">
+                <div className="mb-4">
+                  <h4 className="text-md font-medium mb-2">Your Role Permissions</h4>
+                  <ul className="list-disc pl-5">
+                    {user?.designation === 'Executive' && (
+                      <>
+                        <li>Create and view your own tickets</li>
+                        <li>Request password changes</li>
+                        <li>Update your profile information</li>
+                      </>
+                    )}
+                    {user?.designation === 'Manager' && (
+                      <>
+                        <li>View all executives in your department</li>
+                        <li>View all tickets in your department</li>
+                        <li>View password update requests by executives</li>
+                        <li>Access department analytics and reports</li>
+                      </>
+                    )}
+                    {user?.designation === 'Team Leader' && (
+                      <>
+                        <li>Create, edit, and delete executives</li>
+                        <li>Manage tickets in your department</li>
+                        <li>Approve password change requests</li>
+                        <li>Assign tickets to team members</li>
+                      </>
+                    )}
+                    {user?.designation === 'admin' && (
+                      <>
+                        <li>Create team leaders and managers</li>
+                        <li>Manage departments in your branch</li>
+                        <li>Full access to all tickets in your branch</li>
+                        <li>Approve password requests for team leaders and managers</li>
+                      </>
+                    )}
+                    {user?.designation === 'superadmin' && (
+                      <>
+                        <li>Create and manage all branches</li>
+                        <li>Create and manage admin accounts</li>
+                        <li>Full system access and override capabilities</li>
+                        <li>System-wide configuration and settings</li>
+                      </>
+                    )}
+                  </ul>
                 </div>
+
+                {/* work here */}
+                {/* <div className="" style={{ display: 'flex', gap: '5px' }}>
+                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
+
+                   
+                    {
+                      !userRequest?.some((req) => req.reqto === 'Change Password') ? (
+                        <button
+                          className="btn btn-outline"
+                          onClick={() => ReqToEditProfile('Change Password', 'pending')}
+                        >
+                          <span>Req. for Change Password</span>
+                        </button>
+                      ) : userRequest?.find((req) => req.reqto === 'Change Password')?.status === 'allow' ? (
+                        <button
+                          className="btn btn-outline"
+                          onClick={() => setShowPasswordForm(true)}
+                        >
+                          Change Password
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-outline"
+                          disabled
+                        >
+                          Change Password Req. Pending
+                        </button>
+                      )
+                    }
+                  </div>
+
+                  <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
+
+                    {
+                      !userRequest?.some((req) => req.reqto === 'Edit Profile') ? (
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => ReqToEditProfile('Edit Profile', 'pending')}
+                        >
+                          Req. for Edit Profile
+                        </button>
+                      ) : userRequest?.find((req) => req.reqto === 'Edit Profile')?.status === 'allow' ? (
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => setIsEditing(true)}
+                        >
+                          Edit Profile
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-outline"
+                          disabled
+                        >
+                          Edit Profile Req. Pending
+                        </button>
+                      )
+                    }
+                  </div>
+                </div> */}
+
               </div>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Additional Information */}
-        <div className="card">
-          <div className="card-header">
-            <h3>Activity Summary</h3>
-          </div>
-          <div className="card-body">
-            <div className="mb-4">
-              <h4 className="text-md font-medium mb-2">Your Role Permissions</h4>
-              <ul className="list-disc pl-5">
-                {user?.designation === 'Executive' && (
-                  <>
-                    <li>Create and view your own tickets</li>
-                    <li>Request password changes</li>
-                    <li>Update your profile information</li>
-                  </>
-                )}
-                {user?.designation === 'Manager' && (
-                  <>
-                    <li>View all executives in your department</li>
-                    <li>View all tickets in your department</li>
-                    <li>View password update requests by executives</li>
-                    <li>Access department analytics and reports</li>
-                  </>
-                )}
-                {user?.designation === 'Team Leader' && (
-                  <>
-                    <li>Create, edit, and delete executives</li>
-                    <li>Manage tickets in your department</li>
-                    <li>Approve password change requests</li>
-                    <li>Assign tickets to team members</li>
-                  </>
-                )}
-                {user?.designation === 'admin' && (
-                  <>
-                    <li>Create team leaders and managers</li>
-                    <li>Manage departments in your branch</li>
-                    <li>Full access to all tickets in your branch</li>
-                    <li>Approve password requests for team leaders and managers</li>
-                  </>
-                )}
-                {user?.designation === 'superadmin' && (
-                  <>
-                    <li>Create and manage all branches</li>
-                    <li>Create and manage admin accounts</li>
-                    <li>Full system access and override capabilities</li>
-                    <li>System-wide configuration and settings</li>
-                  </>
-                )}
-              </ul>
-            </div>
-
-            {/* <div>
-              <h4 className="text-md font-medium mb-2">Recent Activity</h4>
-              <div className="space-y-3">
-                <div className="p-2 bg-gray-100 rounded">
-                  <p className="text-sm">Logged in from new device</p>
-                  <p className="text-xs text-muted">Today, 10:45 AM</p>
-                </div>
-                <div className="p-2 bg-gray-100 rounded">
-                  <p className="text-sm">Profile information updated</p>
-                  <p className="text-xs text-muted">Yesterday, 3:20 PM</p>
-                </div>
-                <div className="p-2 bg-gray-100 rounded">
-                  <p className="text-sm">Password changed</p>
-                  <p className="text-xs text-muted">Apr 15, 2023</p>
-                </div>
-              </div>
-            </div> */}
-          </div>
-        </div>
       </div>
-    </div>
+
+    </div >
   );
 }
 

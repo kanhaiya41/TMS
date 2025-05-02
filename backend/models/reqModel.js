@@ -10,6 +10,8 @@ const reqSchema = new mongoose.Schema({
     address: String,
     profile: String,
     designation: String
+}, {
+    timestamps: true
 });
 
 const UserRequests = new mongoose.model('user-requests', reqSchema);

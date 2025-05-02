@@ -7,8 +7,7 @@ const branchSchema = new mongoose.Schema({
     admin: String,
     departments: Number,
     tickets: Number,
-    created: Date
-});
+}, { timestamps: true });
 
 const Branch = new mongoose.model('Branch', branchSchema);
 

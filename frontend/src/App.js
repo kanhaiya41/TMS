@@ -35,13 +35,13 @@ function App() {
 
   useEffect(()=>{
     verifySuperAdmin();
-  },[])
+  },[]);
 
   return (
     <Router>
       <Routes>
         <Route path="/" element={
-          user ? <Navigate to="/dashboard" /> : superAdmin ? <Login /> : <Signup />
+          user ? <Navigate to="/dashboard" /> : superAdmin ? <Login /> : <Signup verifySuperAdmin={verifySuperAdmin} />
         } />
         <Route path="/dashboard/*" element={
           user ? <Dashboard /> : <Navigate to="/" />

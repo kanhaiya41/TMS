@@ -6,9 +6,11 @@ import axios from 'axios';
 import URI from '../utills';
 import toast from 'react-hot-toast';
 import { setUser } from '../Redux/userSlice';
+import { useNavigate } from 'react-router-dom';
 
-function Signup() {
+function Signup({ verifySuperAdmin }) {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
     const [profile, setProfile] = useState(null);
 
@@ -17,9 +19,9 @@ function Signup() {
         password: '',
         cpassword: '',
         email: '',
+        name: '',
         mobile: '',
         address: '',
-        department: ''
     });
 
     const handleChange = (e) => {
@@ -28,16 +30,15 @@ function Signup() {
             ...formData,
             [name]: value
         });
-
     };
 
     const passValidation = () => {
-        if (!formData?.username || !formData?.email || !formData?.password || !formData?.cpassword || !formData?.mobile || !formData?.address || !profile) {
-            alert('Please fill out all Fields!')
+        if (!formData?.username || !formData?.email || !formData?.password || !formData?.cpassword || !formData?.mobile || !formData?.address) {
+            toast.error('Please fill out all Fields!')
             return false;
         }
         else if (!formData?.password?.length > 6) {
-            alert('Password must have at least 6 letters!')
+            toast.error('Password must have at least 6 letters!')
             return false;
         }
         else {
@@ -73,24 +74,18 @@ function Signup() {
                 const formdata = new FormData();
                 formdata.append('username', formData?.username);
                 formdata.append('email', formData?.email);
+                formdata.append('name', formData?.name);
                 formdata.append('password', formData?.password);
                 formdata.append('mobile', formData?.mobile);
-                // formdata.append('branch', user?.branch);
-                formdata.append('department', formData?.department);
                 formdata.append('address', formData?.address);
                 formdata.append('designation', 'superadmin');
-                if (profile) {
+                formdata.append('profile', profile);
 
-                    formdata.append('profile', profile);
-                }
-                else {
-                    alert('not found');
-                }
-                const res = await axios.post(`${URI}/admin/adduser`, formdata, {
+                const res = await axios.post(`${URI}/auth/superadminsignup`, formdata, {
                     headers: {
                         'Content-Type': 'multipart/form-data'
                     }
-                }).then(res=>{
+                }).then(res => {
 
                     // fetchAllUsers();
                     setFormData({
@@ -104,15 +99,16 @@ function Signup() {
                         address: ''
                     });
                     setProfile(null);
+                    verifySuperAdmin();
                     toast.success(res?.data?.message);
                 }).catch(err => {
                     // Handle error and show toast
                     if (err.response && err.response.data && err.response.data.message) {
-                      toast.error(err.response.data.message); // For 400, 401, etc.
+                        toast.error(err.response.data.message); // For 400, 401, etc.
                     } else {
-                      toast.error("Something went wrong");
+                        toast.error("Something went wrong");
                     }
-                  });
+                });
             }
         } catch (error) {
             console.log("while make an admin", error);
@@ -245,7 +241,7 @@ function Signup() {
                     <button
                         type="submit"
                         className="btn btn-primary btn-block"
-                        style={{width:'200%'}}
+                        style={{ width: '200%' }}
                     // disabled={loading}
                     >
                         {/* {loading ? 'Signing in...' : 'Sign In'} */}

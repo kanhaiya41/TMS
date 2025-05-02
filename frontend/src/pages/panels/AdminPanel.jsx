@@ -22,6 +22,7 @@ function AdminPanel({ view = 'departments' }) {
   const [departments, setDepartments] = useState([]);
   const [teamLeaders, setTeamLeaders] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [executive, setExecutive] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [passwordRequests, setPasswordRequests] = useState([]);
   const [branch, setBranch] = useState(null);
@@ -42,7 +43,9 @@ function AdminPanel({ view = 'departments' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [comment, setComment] = useState('');
+  const [userRequest, setUserRequest] = useState();
 
+  //fetching APIs
   // fetch password requests
   const getAllRequests = async () => {
     try {
@@ -51,7 +54,10 @@ function AdminPanel({ view = 'departments' }) {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setAllRequests(res?.data?.allRequests);
+        const matchedExecutives = res?.data?.allRequests?.filter((executive) =>
+          user?.branches.includes(executive.branch)
+        );
+        setAllRequests(matchedExecutives);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -65,19 +71,18 @@ function AdminPanel({ view = 'departments' }) {
     }
   }
 
-  useEffect(() => {
-    getAllRequests();
-  }, []);
-
   //fetch users
   const fetchAllUsers = async () => {
     try {
-      const res = await axios.get(`${URI}/superadmin/getbranches`, {
+      const res = await axios.get(`${URI}/admin/executives`, {
         headers: {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setAllUsers(res?.data?.allBranchesData);
+        const matchedExecutives = res?.data?.allBranchesData?.filter((executive) =>
+          user?.branches.includes(executive.branch)
+        );
+        setAllUsers(matchedExecutives);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -92,12 +97,59 @@ function AdminPanel({ view = 'departments' }) {
     }
   }
 
-  useEffect(() => {
-    fetchAllUsers();
-  }, []);
+  //fetch team leaders
+  const fetchAllTeamLeaders = async () => {
+    try {
+      const res = await axios.get(`${URI}/admin/teamleaders`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        const matchedExecutives = res?.data?.allBranchesData?.filter((executive) =>
+          user?.branches.includes(executive.branch)
+        );
+        setTeamLeaders(matchedExecutives);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+    } catch (error) {
+      console.log("while fetching all Users data", error);
+    }
+  }
+
+  //fetch managers
+  const fetchAllManagers = async () => {
+    try {
+      const res = await axios.get(`${URI}/admin/managers`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        const matchedExecutives = res?.data?.allBranchesData?.filter((executive) =>
+          user?.branches.includes(executive.branch)
+        );
+        setManagers(matchedExecutives);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+    } catch (error) {
+      console.log("while fetching all Users data", error);
+    }
+  }
 
   //fetch department
-
   const fetchDepartment = async () => {
     try {
       const res = await axios.get(`${URI}/admin/department`, {
@@ -105,7 +157,10 @@ function AdminPanel({ view = 'departments' }) {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setDepartments(res?.data?.departmentes)
+        const matchedExecutives = res?.data?.departmentes?.filter((executive) =>
+          user?.branches.includes(executive?.branch)
+        );
+        setDepartments(matchedExecutives);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -127,7 +182,10 @@ function AdminPanel({ view = 'departments' }) {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setTickets(res?.data?.data);
+        const matchedExecutives = res?.data?.data?.filter((ticket) =>
+          user?.branches.includes(ticket?.branch)
+        );
+        setTickets(matchedExecutives);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -141,16 +199,14 @@ function AdminPanel({ view = 'departments' }) {
     }
   }
 
-  // delete password update request
-  const deleteUpdateRequest = async (id) => {
+  const fetchEditProfileRequest = async () => {
     try {
-      const res = await axios.delete(`${URI}/admin/deleteupdaterequest/${id}`, {
+      const res = await axios.get(`${URI}/auth/getupdateprofilerequests`, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res => {
-        getAllRequests();
-        toast.success(res?.data?.message);
+      }).then(r => {
+        setUserRequest(r?.data?.requests?.filter((req) => req?.designation === 'Manager' || req?.designation === 'Team Leader'));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -160,10 +216,22 @@ function AdminPanel({ view = 'departments' }) {
         }
       });
     } catch (error) {
-      console.log("while delete update request");
+      console.log('while fetching edit profile request', error);
     }
   }
 
+  useEffect(() => {
+    getAllRequests();
+    fetchAllUsers();
+    fetchAllManagers();
+    fetchAllTeamLeaders();
+    fetchAllTickets();
+    fetchDepartment();
+    fetchEditProfileRequest();
+  }, []);
+
+
+  //normal actions
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedTicket(null);
@@ -173,76 +241,6 @@ function AdminPanel({ view = 'departments' }) {
     setSelectedTicket(ticket);
     setIsModalOpen(true);
   };
-
-  //add comment on ticket
-  const addCommentOnTicket = async () => {
-    try {
-      const ticketId = selectedTicket?._id;
-      const commenter = user?.department || user?.designation;
-      const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res => {
-        fetchAllTickets();
-        handleCloseModal();
-        setComment('');
-        toast.success(res?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
-    } catch (error) {
-      console.log('error while adding comment', error);
-    }
-  }
-
-  useEffect(() => {
-    fetchAllTickets();
-    fetchDepartment();
-  }, []);
-
-  useEffect(() => {
-    // Get branch info
-    const userBranch = mockBranches.find(b => b.adminId === user?.id);
-    setBranch(userBranch);
-
-    // Get departments in the branch
-    const branchDepartments = mockDepartments.filter(dept =>
-      dept.branchId === userBranch?.id
-    );
-    // setDepartments(branchDepartments);
-
-    // Get team leaders in the branch
-    const branchTeamLeaders = mockUsers.filter(u =>
-      u?.designation === 'Team Leader' && branchDepartments.some(dept => dept.name === u.department)
-    );
-    setTeamLeaders(branchTeamLeaders);
-
-    // Get managers in the branch
-    const branchManagers = mockUsers.filter(u =>
-      u?.designation === 'Manager' && branchDepartments.some(dept => dept.name === u.department)
-    );
-    setManagers(branchManagers);
-
-    // Get all tickets in the branch
-    const branchTickets = mockTickets.filter(ticket =>
-      branchDepartments.some(dept => dept.name === ticket.department)
-    );
-    // setTickets(branchTickets);
-
-    // Get password requests from team leaders and managers
-    const teamLeaderIds = branchTeamLeaders.map(tl => tl.id);
-    const managerIds = branchManagers.map(m => m.id);
-    const branchPasswordRequests = mockPasswordRequests.filter(req =>
-      teamLeaderIds.includes(req.userId) || managerIds.includes(req.userId)
-    );
-    setPasswordRequests(branchPasswordRequests);
-  }, [user?.id]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -256,9 +254,12 @@ function AdminPanel({ view = 'departments' }) {
   const handleEditUser = (userId, role) => {
     let userToEdit;
     if (role === 'Team Leader') {
-      userToEdit = allUsers?.find(tl => tl._id === userId);
+      userToEdit = teamLeaders?.find(tl => tl._id === userId);
     } else if (role === 'Manager') {
-      userToEdit = allUsers?.find(m => m._id === userId);
+      userToEdit = managers?.find(m => m._id === userId);
+    }
+    else if (role === 'Executive') {
+      userToEdit = allUsers?.find(e => e._id === userId);
     }
 
     setselectedUser(userToEdit);
@@ -266,6 +267,73 @@ function AdminPanel({ view = 'departments' }) {
     setShowUserForm(true);
   };
 
+  const handleEditDepartment = (departmentId) => {
+    const departmentToEdit = departments.find(dept => dept._id === departmentId);
+    setSelectedDepartment(departmentToEdit);
+    setShowDepartmentForm(true);
+  };
+
+  const confirmDeleteDepartment = (departmentId) => {
+    const departmentToDelete = departments.find(dept => dept._id === departmentId);
+    setItemToDelete(departmentToDelete);
+    setDeleteType('department');
+    setIsDeleteModalOpen(true);
+  };
+
+
+  //filters
+  // Filter departments based on search term
+  const filteredDepartments = departments?.filter(dept =>
+    dept?.branch === user?.branch &&
+    dept.name?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    dept.description?.toLowerCase().includes(searchTerm?.toLowerCase())
+  );
+
+  // Filter team leaders and managers based on search term
+  const filteredTeamLeaders = teamLeaders?.filter(tl =>
+    tl.branch?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    tl.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    tl.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    tl.department?.toLowerCase().includes(searchTerm?.toLowerCase())
+  );
+
+  const filteredManagers = managers?.filter(m =>
+    m.branch?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    m.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    m.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    m.department?.toLowerCase().includes(searchTerm?.toLowerCase())
+  );
+
+  const filteredExecutives = allUsers?.filter(m =>
+    m.branch?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    m.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    m.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    m.department?.toLowerCase().includes(searchTerm?.toLowerCase())
+  );
+
+  // Filter tickets based on status and search term
+  const filteredTickets = tickets?.filter(ticket => {
+    const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus;
+    const matchesSearch = ticket.subject?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      ticket?.branch?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      ticket?.date?.includes(searchTerm?.toLocaleLowerCase())
+    return matchesStatus && matchesSearch;
+  });
+
+  // Filter password requests based on search term
+  const filteredPasswordRequests = allRequests?.filter(req => {
+    const matchesSearch =
+      req?.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      req?.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      req?.department?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      req?.designation?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      req?.branch?.toLowerCase().includes(searchTerm?.toLowerCase());
+
+    return matchesSearch;
+  });
+
+
+  //not worked
   const handleUpdateUser = (userData) => {
     if (userRole === 'Team Leader') {
       const updatedTeamLeaders = teamLeaders.map(tl =>
@@ -285,34 +353,12 @@ function AdminPanel({ view = 'departments' }) {
     alert('User updated successfully!');
   };
 
-  const confirmDeleteUser = async (userId) => {
-    try {
-      const res = await axios.delete(`${URI}/admin/deleteuser/${userId}`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res => {
-        fetchAllUsers();
-        toast.success(res?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
-    } catch (error) {
-      console.log("while delete user", error);
-    }
-  };
-
   const handleDeleteUser = () => {
     if (userRole === 'Team Leader') {
-      const updatedTeamLeaders = teamLeaders.filter(tl => tl.id !== itemToDelete.id);
+      const updatedTeamLeaders = teamLeaders?.filter(tl => tl.id !== itemToDelete.id);
       setTeamLeaders(updatedTeamLeaders);
     } else if (userRole === 'Manager') {
-      const updatedManagers = managers.filter(m => m.id !== itemToDelete.id);
+      const updatedManagers = managers?.filter(m => m.id !== itemToDelete.id);
       setManagers(updatedManagers);
     }
 
@@ -338,12 +384,6 @@ function AdminPanel({ view = 'departments' }) {
     alert('Department created successfully!');
   };
 
-  const handleEditDepartment = (departmentId) => {
-    const departmentToEdit = departments.find(dept => dept._id === departmentId);
-    setSelectedDepartment(departmentToEdit);
-    setShowDepartmentForm(true);
-  };
-
   const handleUpdateDepartment = (departmentData) => {
     const updatedDepartments = departments.map(dept =>
       dept.id === selectedDepartment.id ? { ...dept, ...departmentData } : dept
@@ -353,38 +393,6 @@ function AdminPanel({ view = 'departments' }) {
     setSelectedDepartment(null);
     setShowDepartmentForm(false);
     alert('Department updated successfully!');
-  };
-
-  const confirmDeleteDepartment = (departmentId) => {
-    const departmentToDelete = departments.find(dept => dept._id === departmentId);
-    setItemToDelete(departmentToDelete);
-    setDeleteType('department');
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteDepartment = async () => {
-    try {
-      const res = await axios.delete(`${URI}/admin/deletedepartment/${itemToDelete?._id}`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res => {
-        fetchDepartment();
-        setItemToDelete('');
-        setDeleteType('');
-        setIsDeleteModalOpen(false);
-        toast.success(res?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
-    } catch (error) {
-      console.log("while delete user", error);
-    }
   };
 
   const handleUpdateTicketStatus = (ticketId, newStatus) => {
@@ -428,50 +436,143 @@ function AdminPanel({ view = 'departments' }) {
     alert('Password request rejected!');
   };
 
-  // Filter departments based on search term
-  const filteredDepartments = departments.filter(dept =>
-    dept?.branch === user?.branch &&
-    dept.name?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    dept.description?.toLowerCase().includes(searchTerm?.toLowerCase())
-  );
+  useEffect(() => {
+    // Get branch info
+    const userBranch = mockBranches.find(b => b.adminId === user?.id);
+    setBranch(userBranch);
 
-  // Filter team leaders and managers based on search term
-  const filteredTeamLeaders = allUsers.filter(tl =>
-    tl?.branch === user?.branch && tl?.designation === 'Team Leader' &&
-    tl.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    tl.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    tl.department?.toLowerCase().includes(searchTerm?.toLowerCase())
+    // Get departments in the branch
+    const branchDepartments = mockDepartments?.filter(dept =>
+      dept.branchId === userBranch?.id
+    );
+    // setDepartments(branchDepartments);
 
-  );
+    // Get team leaders in the branch
+    const branchTeamLeaders = mockUsers?.filter(u =>
+      u?.designation === 'Team Leader' && branchDepartments.some(dept => dept.name === u.department)
+    );
+    setTeamLeaders(branchTeamLeaders);
 
-  const filteredManagers = allUsers.filter(m =>
-    m?.branch === user?.branch && m?.designation === 'Manager' &&
-    m.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    m.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    m.department?.toLowerCase().includes(searchTerm?.toLowerCase())
-  );
+    // Get managers in the branch
+    const branchManagers = mockUsers?.filter(u =>
+      u?.designation === 'Manager' && branchDepartments.some(dept => dept.name === u.department)
+    );
+    setManagers(branchManagers);
 
-  // Filter tickets based on status and search term
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus;
-    const matchesSearch = ticket.title?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      ticket.description?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      ticket.department?.toLowerCase().includes(searchTerm?.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+    // Get all tickets in the branch
+    const branchTickets = mockTickets?.filter(ticket =>
+      branchDepartments.some(dept => dept.name === ticket.department)
+    );
+    // setTickets(branchTickets);
 
-  // Filter password requests based on search term
-  const filteredPasswordRequests = allRequests?.filter(req => {
-    const branchMatches = user?.branch === req?.branch;
-    const validDesignation = req?.designation === 'Team Leader' || req?.designation === 'Manager';
-    const matchesSearch =
-      req?.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      req?.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      req?.department?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      req?.designation?.toLowerCase().includes(searchTerm?.toLowerCase());
+    // Get password requests from team leaders and managers
+    const teamLeaderIds = branchTeamLeaders.map(tl => tl.id);
+    const managerIds = branchManagers.map(m => m.id);
+    const branchPasswordRequests = mockPasswordRequests?.filter(req =>
+      teamLeaderIds.includes(req.userId) || managerIds.includes(req.userId)
+    );
+    setPasswordRequests(branchPasswordRequests);
+  }, [user?.id]);
 
-    return branchMatches && validDesignation && matchesSearch;
-  });
+
+  //action APIs
+  // delete password update request
+  const deleteUpdateRequest = async (id) => {
+    try {
+      const res = await axios.delete(`${URI}/admin/deleteupdaterequest/${id}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        getAllRequests();
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log("while delete update request");
+    }
+  }
+
+  //add comment on ticket
+  const addCommentOnTicket = async () => {
+    try {
+      const ticketId = selectedTicket?._id;
+      const commenter = user?.department || user?.designation;
+      const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        fetchAllTickets();
+        handleCloseModal();
+        setComment('');
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('error while adding comment', error);
+    }
+  }
+
+  const confirmDeleteUser = async (userId) => {
+    try {
+      const res = await axios.delete(`${URI}/admin/deleteuser/${userId}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        fetchAllUsers();
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log("while delete user", error);
+    }
+  };
+
+  const handleDeleteDepartment = async () => {
+    try {
+      const res = await axios.delete(`${URI}/admin/deletedepartment/${itemToDelete?._id}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        fetchDepartment();
+        setItemToDelete('');
+        setDeleteType('');
+        setIsDeleteModalOpen(false);
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log("while delete user", error);
+    }
+  };
+
 
   // Render different content based on the view
   const renderContent = () => {
@@ -484,6 +585,8 @@ function AdminPanel({ view = 'departments' }) {
         return renderTicketsView();
       case 'password-requests':
         return renderPasswordRequestsView();
+      case 'user-requests':
+        return renderUserRequestsView();
       default:
         return renderDepartmentsView();
     }
@@ -514,7 +617,7 @@ function AdminPanel({ view = 'departments' }) {
           <div className="card-body">
             <DepartmentForm
               initialData={selectedDepartment}
-              allUsers={allUsers}
+              allUsers={teamLeaders}
               // onSubmit={selectedDepartment ? handleUpdateDepartment : handleCreateDepartment}
               fetchDepartment={fetchDepartment}
               onCancel={() => {
@@ -548,29 +651,29 @@ function AdminPanel({ view = 'departments' }) {
                     <thead>
                       <tr>
                         <th>Name</th>
-                        <th>Description</th>
-                        <th>Manager</th>
+                        <th>Branch</th>
+                        <th>Team Leader</th>
                         <th>Created</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredDepartments.map(dept => {
-                        const manager = managers.find(m => m.id === dept.managerId);
+                        const tl = teamLeaders?.find(tl => tl?.username === dept?.teamleader);
                         return (
                           <tr key={dept.id}>
-                            <td className="font-medium">{dept.name}</td>
-                            <td>{dept.description}</td>
-                            <td>
-                              {manager ? (
+                            <td className="font-medium">{dept?.name}</td>
+                            <td>{dept?.branch}</td>
+                            <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              {tl ? (
                                 <div className="flex items-center gap-2">
-                                  <div className="user-avatar">{manager.avatar}</div>
-                                  <span>{manager.name}</span>
+                                  <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="" />
+                                  <span>{tl?.name}</span>
                                 </div>
                               ) : <span className="text-muted">Not assigned</span>}
                             </td>
                             <td>{formatDate(dept.createdAt)}</td>
-                            <td>
+                            <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                               <div className="flex gap-2">
                                 <button
                                   className="btn btn-sm btn-outline"
@@ -613,6 +716,15 @@ function AdminPanel({ view = 'departments' }) {
         </div>
         <div className="flex gap-2">
           <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setUserRole('Executive');
+              setShowUserForm(true);
+            }}
+          >
+            Add Executive
+          </button>
+          <button
             className="btn btn-primary"
             onClick={() => {
               setUserRole('Team Leader');
@@ -638,8 +750,8 @@ function AdminPanel({ view = 'departments' }) {
           <div className="card-header">
             <h3>
               {selectedUser
-                ? `Edit ${userRole === 'Team Leader' ? 'Team Leader' : 'Manager'}`
-                : `Create New ${userRole === 'Team Leader' ? 'Team Leader' : 'Manager'}`}
+                ? `Edit ${userRole === 'Team Leader' ? 'Team Leader' : userRole === 'Manager' ? 'Manager' : 'Executive'}`
+                : `Create New ${userRole === 'Team Leader' ? 'Team Leader' : userRole === 'Manager' ? 'Manager' : 'Executive'}`}
             </h3>
           </div>
           <div className="card-body">
@@ -692,11 +804,11 @@ function AdminPanel({ view = 'departments' }) {
                       {filteredTeamLeaders?.map(tl => (
                         <>
                           {
-                            tl?.designation === "Team Leader" && tl?.branch === user?.branch &&
+                            // tl?.designation === "Team Leader" && tl?.branch === user?.branch &&
                             <tr key={tl.id}>
-                              <td>
+                              <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <div className="flex items-center gap-2">
-                                  <img className="user-avatar" src={tl?.profile} alt="" />
+                                  <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="" />
                                   {/* <div className="user-avatar">{tl?.profile}</div> */}
                                   <span>{tl?.username}</span>
                                 </div>
@@ -704,7 +816,7 @@ function AdminPanel({ view = 'departments' }) {
                               <td>{tl?.email}</td>
                               <td>{tl?.department}</td>
                               <td>{formatDate(tl?.createdAt)}</td>
-                              <td>
+                              <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <div className="flex gap-2">
                                   <button
                                     className="btn btn-sm btn-outline"
@@ -747,7 +859,7 @@ function AdminPanel({ view = 'departments' }) {
                       <tr>
                         <th>Name</th>
                         <th>Email</th>
-                        <th>Department</th>
+                        <th>Branch</th>
                         <th>Joined</th>
                         <th>Actions</th>
                       </tr>
@@ -756,11 +868,75 @@ function AdminPanel({ view = 'departments' }) {
                       {filteredManagers?.map(m => (
                         <>
                           {
-                            m?.designation === "Manager" && m?.branch === user?.branch &&
+                            // m?.designation === "Manager" && m?.branch === user?.branch &&
                             < tr key={m.id}>
                               <td>
                                 <div className="flex items-center gap-2">
-                                  <img className="user-avatar" src={m?.profile} alt="P" />
+                                  <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="P" />
+                                  {/* <div className="user-avatar">{m?.profile}</div> */}
+                                  <span>{m?.username}</span>
+                                </div>
+                              </td>
+                              <td>{m?.email}</td>
+                              <td>{m?.branch}</td>
+                              <td>{formatDate(m.createdAt)}</td>
+                              <td>
+                                <div className="flex gap-2">
+                                  <button
+                                    className="btn btn-sm btn-outline"
+                                    onClick={() => handleEditUser(m._id, 'Manager')}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="btn btn-sm btn-error"
+                                    onClick={() => confirmDeleteUser(m._id)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr >
+                          }
+                        </>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-4 text-center">
+                  <p className="text-muted">No managers found. Add a new manager to get started!</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-header">
+              <h3>Executives</h3>
+            </div>
+            <div className="card-body p-0">
+              {filteredExecutives?.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Department</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredExecutives?.map(m => (
+                        <>
+                          {
+                            // m?.designation === "Manager" && m?.branch === user?.branch &&
+                            < tr key={m.id}>
+                              <td>
+                                <div className="flex items-center gap-2">
+                                  <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="P" />
                                   {/* <div className="user-avatar">{m?.profile}</div> */}
                                   <span>{m?.username}</span>
                                 </div>
@@ -793,7 +969,7 @@ function AdminPanel({ view = 'departments' }) {
                 </div>
               ) : (
                 <div className="p-4 text-center">
-                  <p className="text-muted">No managers found. Add a new manager to get started!</p>
+                  <p className="text-muted">No managers found. Add a new executive to get started!</p>
                 </div>
               )}
             </div>
@@ -845,18 +1021,17 @@ function AdminPanel({ view = 'departments' }) {
 
       <div className="card">
         <div className="card-body p-0">
-          {filteredTickets.length > 0 ? (
+          {filteredTickets?.length > 0 ? (
             <div className="table-responsive">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>index</th>
+                    <th>Branch</th>
                     <th>Status</th>
                     <th>Priority</th>
                     <th>Date</th>
 
                     <th>Subject</th>
-                    <th>Department</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -866,10 +1041,9 @@ function AdminPanel({ view = 'departments' }) {
                     return (
                       <>
                         {
-                          ticket?.branch === user?.branch &&
 
                           <tr key={index + 1}>
-                            <td>#{index + 1}</td>
+                            <td>{ticket?.branch}</td>
                             <td>
                               <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
                                 ticket.status === 'in-progress' ? 'badge-primary' :
@@ -889,7 +1063,6 @@ function AdminPanel({ view = 'departments' }) {
                             </td>
                             <td>{formatDate(ticket?.date)}</td>
                             <td>{ticket?.subject}</td>
-                            <td>{ticket?.department}</td>
                             <td>
                               <div className="flex gap-2">
                                 {/* {ticket.status !== 'resolved' && (
@@ -988,7 +1161,7 @@ function AdminPanel({ view = 'departments' }) {
                       <th>ID</th>
                       <th>User</th>
                       <th>Role</th>
-                      <th>Department</th>
+                      <th>Branch</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -1009,7 +1182,7 @@ function AdminPanel({ view = 'departments' }) {
                             <td>
                               {request?.designation}
                             </td>
-                            <td>{request?.department}</td>
+                            <td>{request?.branch}</td>
 
                             <td>
                               {/* {request?.status === 'pending' ? ( */}
@@ -1045,6 +1218,132 @@ function AdminPanel({ view = 'departments' }) {
             )}
           </div>
         )}
+      </div>
+    </>
+  );
+
+  const statusUpdateforUserRequest = async (requestId, status) => {
+    try {
+      const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        fetchEditProfileRequest();
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while status update for user request');
+    }
+  }
+
+  const renderUserRequestsView = () => (
+    <>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold">User Requests</h2>
+        <p className="text-muted">Manage requests from team leaders and managers</p>
+      </div>
+
+      <div className="card mb-4">
+        <div className="card-body">
+          <div className="form-group">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search password requests"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+
+        <div className="card-body p-0">
+          {userRequest?.length > 0 ? (
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Department</th>
+                    <th>Req. to</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userRequest?.map((request, index) => {
+                    return (
+                      <>
+                        <tr key={request?.id}>
+
+                          <td>
+
+                            <div className="flex items-center gap-2">
+                              <img src={request?.profile} className='user-avatar' alt="PF" />
+                              <span>{request?.username}</span>
+                            </div>
+
+                          </td>
+                          <td>
+                            {request?.designation}
+                          </td>
+                          <td>{request?.department}</td>
+                          <td>{request?.reqto}</td>
+                          <td>
+                            {/* {request?.status === 'pending' ? ( */}
+                            <div className="flex gap-2">
+                              {
+                                request?.status === 'pending' ?
+                                  <>
+                                    <button
+                                      className="btn btn-sm btn-success"
+                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow')}
+                                    >Accept
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-error"
+                                      onClick={() => deleteUpdateRequest(request?._id)}
+                                    >
+                                      Delete
+                                    </button>
+                                  </> :
+                                  <button
+                                    className="btn btn-sm btn-error"
+                                  // onClick={() => deleteUpdateRequest(request?._id)}
+                                  >
+                                    View
+                                  </button>
+                              }
+                            </div>
+
+                          </td>
+                        </tr>
+
+                      </>
+
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-4 text-center">
+              <p className="text-muted">No password requests found.</p>
+            </div>
+          )}
+        </div>
+
       </div>
     </>
   );

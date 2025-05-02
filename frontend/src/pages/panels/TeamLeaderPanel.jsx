@@ -12,6 +12,7 @@ import { } from '@fortawesome/free-brands-svg-icons'
 import { faBell, faBuilding, faChartBar, faEdit, faEye, faMoon, faUser } from '@fortawesome/free-regular-svg-icons'
 import { faBars, faChartLine, faGear, faLock, faSignOut, faTicketAlt, faTimes, faTrash, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import TicketForm from '../../components/TicketForm';
 
 function TeamLeaderPanel({ view = 'executives' }) {
 
@@ -31,6 +32,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [comment, setComment] = useState('');
+  const [showTicketForm, setShowTicketForm] = useState(false);
 
   const [allRequests, setAllRequests] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
@@ -43,7 +45,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         setAllRequests(res?.data?.allRequests);
       }).catch(err => {
         // Handle error and show toast
@@ -66,7 +68,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=> {
+      }).then(res => {
         setDepartment(res?.data?.departmentes)
       }).catch(err => {
         // Handle error and show toast
@@ -89,12 +91,12 @@ function TeamLeaderPanel({ view = 'executives' }) {
   //fetch users
   const fetchAllUsers = async () => {
     try {
-      const res = await axios.get(`${URI}/superadmin/getbranches`, {
+      const res = await axios.get(`${URI}/admin/executives`, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
-        setAllUsers(res?.data?.allBranchesData);
+      }).then(res => {
+        setAllUsers(res?.data?.allBranchesData?.filter((exec) => exec?.branch === user?.branch && exec?.department === exec?.department));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -119,8 +121,8 @@ function TeamLeaderPanel({ view = 'executives' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=> {
-        setTickets(res?.data?.data);
+      }).then(res => {
+        setTickets(res?.data?.data?.filter((tickt) => tickt?.branch === user?.branch && tickt?.department?.filter((dept) => dept?.name === user?.department)));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -171,7 +173,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         fetchAllUsers();
         toast.success(res?.data?.message);
       }).catch(err => {
@@ -199,7 +201,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         getAllRequests();
         toast.success(res?.data?.message);
       }).catch(err => {
@@ -218,7 +220,8 @@ function TeamLeaderPanel({ view = 'executives' }) {
   // Filter executives based on search term
   const filteredExecutives = allUsers?.filter(exec =>
     exec?.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    exec?.email?.toLowerCase().includes(searchTerm?.toLowerCase())
+    exec?.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    exec?.address?.toLowerCase().includes(searchTerm?.toLowerCase())
   );
 
   // Filter tickets based on status and search term
@@ -254,7 +257,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=> {
+      }).then(res => {
         fetchAllTickets();
         toast.success(res?.data?.message);
       }).catch(err => {
@@ -265,7 +268,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           toast.error("Something went wrong");
         }
       });
-    
+
     } catch (error) {
       console.log('error while ticket updation', error);
     }
@@ -280,7 +283,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         fetchAllTickets();
         handleCloseModal();
         setComment('');
@@ -301,18 +304,18 @@ function TeamLeaderPanel({ view = 'executives' }) {
   const reAssignTicket = async () => {
     try {
       const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto })
-      .then(res=>{
-        fetchAllTickets();
-        handleCloseModal();
-        toast.success(res?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
+        .then(res => {
+          fetchAllTickets();
+          handleCloseModal();
+          toast.success(res?.data?.message);
+        }).catch(err => {
+          // Handle error and show toast
+          if (err.response && err.response.data && err.response.data.message) {
+            toast.error(err.response.data.message); // For 400, 401, etc.
+          } else {
+            toast.error("Something went wrong");
+          }
+        });
     } catch (error) {
       console.log("while Re-Assigning the Ticket", error);
       toast.error('Error While Re-Assigning the Ticket', error);
@@ -399,12 +402,12 @@ function TeamLeaderPanel({ view = 'executives' }) {
                         return (
                           <>
                             {
-                              exec?.designation === 'Executive' && exec?.department === user?.department && exec?.branch === user?.branch &&
+                              // exec?.designation === 'Executive' && exec?.department === user?.department && exec?.branch === user?.branch &&
                               <tr key={exec?.id}>
                                 <td>
                                   <div className="flex items-center gap-2">
                                     {/* <div className="user-avatar">{exec?.avatar}</div> */}
-                                    <img src={exec?.profile} className='user-avatar' alt="PF" />
+                                    <img src={exec?.profile ? exec?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
                                     <span>{exec?.username}</span>
                                   </div>
                                 </td>
@@ -493,9 +496,17 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
   const renderTLTicketsView = () => (
     <>
-      <div className="mb-4">
-        <h2 className="text-xl font-bold">Department Tickets</h2>
-        <p className="text-muted">Manage and resolve tickets in your department</p>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h2 className="text-xl font-bold">Department Tickets</h2>
+          <p className="text-muted">Manage and resolve tickets in your department</p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowTicketForm(true)}
+        >
+          Create Ticket
+        </button>
       </div>
 
       <div className="card mb-4">
@@ -530,97 +541,111 @@ function TeamLeaderPanel({ view = 'executives' }) {
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-body p-0">
-          {filteredTickets.length > 0 ? (
-            <div className="table-responsive">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>IssuedBy</th>
-                    <th>IssuedOn</th>
-                    <th>Subject</th>
-                    <th>Status</th>
-                    <th>Priority</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTickets?.map(ticket => {
-                    // const creator = mockUsers.find(u => u.id === ticket?.createdBy);
-
-                    return (
-                      <>
-                        {
-                          ticket?.department === user?.department && ticket?.branch === user?.branch &&
-                          <tr key={ticket?.id}>
-                            <td>{ticket?.name}</td>
-                            <td>{ticket?.issuedby}</td>
-                            {/* <td>{creator ? creator.name : 'Unknown'}</td> */}
-                            <td>{formatDate(ticket?.date)}</td>
-                            <td>{ticket?.subject}</td>
-                            <td>
-                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                                ticket?.status === 'in-progress' ? 'badge-primary' :
-                                  'badge-success'
-                                }`}>
-                                {ticket?.status === 'in-progress' ? 'In Progress' :
-                                  ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
-                                ticket?.priority === 'medium' ? 'badge-warning' :
-                                  'badge-primary'
-                                }`}>
-                                {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
-                              </span>
-                            </td>
-
-                            <td>
-                              <div className="flex gap-2">
-                                {ticket?.status !== 'resolved' && (
-                                  <>
-                                    {ticket?.status === 'open' && (
-                                      <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
-                                      >
-                                        Start
-                                      </button>
-                                    )}
-                                    {ticket?.status === 'in-progress' && (
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
-                                      >
-                                        Resolve
-                                      </button>
-                                    )}
-                                  </>
-                                )}
-                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
-                              </div>
-                            </td>
-                          </tr>
-                        }
-                      </>
-                    );
-                  })}
-                </tbody >
-              </table>
-            </div>
-          ) : (
-            <div className="p-4 text-center">
-              <p className="text-muted">No tickets found with the current filters.</p>
-            </div>
-          )}
-
-
-
+      {showTicketForm ? (
+        <div className="card mb-4 animate-slide-up">
+          <div className="card-header">
+            <h3>Create New Ticket</h3>
+          </div>
+          <div className="card-body">
+            <TicketForm
+              // onSubmit={handleCreateTicket}
+              onCancel={() => setShowTicketForm(false)}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+
+        <div className="card">
+          <div className="card-body p-0">
+            {filteredTickets.length > 0 ? (
+              <div className="table-responsive">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>IssuedBy</th>
+                      <th>IssuedOn</th>
+                      <th>Subject</th>
+                      <th>Status</th>
+                      <th>Priority</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTickets?.map(ticket => {
+                      // const creator = mockUsers.find(u => u.id === ticket?.createdBy);
+
+                      return (
+                        <>
+                          {
+                            // ticket?.department === user?.department && ticket?.branch === user?.branch &&
+                            <tr key={ticket?.id}>
+                              <td>{ticket?.name}</td>
+                              <td>{ticket?.issuedby}</td>
+                              {/* <td>{creator ? creator.name : 'Unknown'}</td> */}
+                              <td>{formatDate(ticket?.date)}</td>
+                              <td>{ticket?.subject}</td>
+                              <td>
+                                <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                  ticket?.status === 'in-progress' ? 'badge-primary' :
+                                    'badge-success'
+                                  }`}>
+                                  {ticket?.status === 'in-progress' ? 'In Progress' :
+                                    ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                                  ticket?.priority === 'medium' ? 'badge-warning' :
+                                    'badge-primary'
+                                  }`}>
+                                  {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                                </span>
+                              </td>
+
+                              <td>
+                                <div className="flex gap-2">
+                                  {ticket?.status !== 'resolved' && (
+                                    <>
+                                      {ticket?.status === 'open' && (
+                                        <button
+                                          className="btn btn-sm btn-primary"
+                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
+                                        >
+                                          Start
+                                        </button>
+                                      )}
+                                      {ticket?.status === 'in-progress' && (
+                                        <button
+                                          className="btn btn-sm btn-success"
+                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
+                                        >
+                                          Resolve
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                  <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                                </div>
+                              </td>
+                            </tr>
+                          }
+                        </>
+                      );
+                    })}
+                  </tbody >
+                </table>
+              </div>
+            ) : (
+              <div className="p-4 text-center">
+                <p className="text-muted">No tickets found with the current filters.</p>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )
+      }
     </>
   );
 
@@ -683,14 +708,12 @@ function TeamLeaderPanel({ view = 'executives' }) {
                       return (
                         <>
                           {
-                            // request?.designation === "Executive" && request?.department === user?.department && request?.branch === user?.branch &&
                             <tr key={request?.id}  >
                               <td>#{index + 1}</td>
                               <td>
 
                                 <div className="flex items-center gap-2">
-                                  <img src={request?.profile} className='user-avatar' alt="PF" />
-                                  {/* <div className="user-avatar">{request?.profile}</div> */}
+                                  <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
                                   <span>{request?.username}</span>
                                 </div>
 
@@ -787,11 +810,15 @@ function TeamLeaderPanel({ view = 'executives' }) {
                     </span>
 
                   </div>
+                  {
+                    selectedTicket?.department?.map((curElem) => (
+                      <div className="mb-4">
+                        <h5 className="font-bold mb-2">{curElem?.name}</h5>
+                        <p>{curElem?.description}</p>
+                      </div>
+                    ))
+                  }
 
-                  <div className="mb-4">
-                    <h5 className="font-bold mb-2">Description</h5>
-                    <p>{selectedTicket?.description}</p>
-                  </div>
 
                   <div className="mb-4">
                     <h5 className="font-bold mb-2">Comments ({selectedTicket?.comments?.length})</h5>

@@ -24,8 +24,8 @@ function ExecutivePanel({ user, view = 'tickets' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
-        setTickets(res?.data?.data);
+      }).then(res => {
+        setTickets(res?.data?.data?.filter((ticket) => ticket?.branch === user?.branch && ticket?.issuedby === user?.username));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -56,8 +56,8 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
   const filteredTickets = tickets.filter(ticket => {
     const matchesStatus = filterStatus === 'all' || ticket?.status === filterStatus;
-    const matchesSearch = ticket?.subject?.toLowerCase().includes(searchTerm?.toLowerCase()) || 
-                         ticket?.description?.toLowerCase().includes(searchTerm?.toLowerCase());
+    const matchesSearch = ticket?.subject?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      ticket?.name?.toLowerCase().includes(searchTerm?.toLowerCase())
     return matchesStatus && matchesSearch;
   });
 
@@ -136,9 +136,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                     <tr>
                       <th>ID</th>
                       <th>Name</th>
-                      <th>IssuedBy</th>
                       <th>Subject</th>
-                      <th>Department</th>
                       <th>Action</th>
                     </tr>
                   </thead>
@@ -147,18 +145,15 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                       <tr key={ticket?.id}>
                         <td>#{index + 1}</td>
                         <td>{ticket?.name}</td>
-                        <td>
-                          {
-                            ticket?.issuedby
-                          }
-                          {/* <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+
+                        {/* <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
                             ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`}>
                             {ticket?.status === 'in-progress' ? 'In Progress' :
                               ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
                           </span> */}
-                        </td>
+
                         <td>
                           {ticket?.subject}
                           {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
@@ -169,7 +164,6 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                           </span> */}
                         </td>
                         {/* <td>{formatDate(ticket?.createdAt)}</td> */}
-                        <td>{ticket?.department}</td>
                         <td>
                           <button
                             className="btn btn-sm btn-outline"
@@ -224,11 +218,15 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                       Created: {formatDate(selectedTicket?.date)}
                     </p>
                   </div>
+                  {
+                    selectedTicket?.department?.map(curElem => (
+                      <div className="mb-4">
+                        <h5 className="font-bold mb-2">{curElem?.name}</h5>
+                        <p>{curElem?.description}</p>
+                      </div>
+                    ))
+                  }
 
-                  <div className="mb-4">
-                    <h5 className="font-bold mb-2">Description</h5>
-                    <p>{selectedTicket?.description}</p>
-                  </div>
 
                   <div className="mb-4">
                     <h5 className="font-bold mb-2">Comments ({selectedTicket?.comments?.length})</h5>

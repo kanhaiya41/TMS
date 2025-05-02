@@ -16,12 +16,12 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
   //fetch users
   const fetchAllUsers = async () => {
     try {
-      const res = await axios.get(`${URI}/superadmin/getbranches`, {
+      const res = await axios.get(`${URI}/superadmin/getadmins`, {
         headers: {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        res?.data?.allBranchesData?.filter((us) => us?.designation !== 'superadmin')
+        setAllUsers(res?.data?.allBranchesData?.filter((us) => us?.designation !== 'superadmin'));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -136,7 +136,7 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
   }
 
   // Filter out admins who are already assigned to a branch
-  const availableAdmins = allUsers.filter(admin =>
+  const availableAdmins = allUsers?.filter(admin =>
     admin.designation === 'admin'
   );
 
@@ -180,9 +180,9 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
           onChange={handleChange}
         >
           <option value="" selected disabled>Select an admin (optional)</option>
-          {availableAdmins.map(admin => (
-            <option key={admin.id} value={admin.id}>
-              {admin?.username} - {admin.email}
+          {availableAdmins?.map(admin => (
+            <option key={admin?.id} value={admin?.username}>
+              {admin?.username} - {admin?.branches?.map(b=>(<>{b}, </>))}
             </option>
           ))}
         </select>

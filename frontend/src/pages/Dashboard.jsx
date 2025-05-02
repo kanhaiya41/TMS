@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { faDyalog } from '@fortawesome/free-brands-svg-icons'
-import { faBell, faBuilding, faChartBar, faMoon, faSun, faUser } from '@fortawesome/free-regular-svg-icons'
-import { faBars, faChartLine, faGear, faLock, faSignOut, faTicketAlt, faTimes, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
+import { faBell, faBuilding, faChartBar, faComment, faMoon, faSun, faUser } from '@fortawesome/free-regular-svg-icons'
+import { faBars, faChartLine, faCodePullRequest, faCommentDots, faGear, faLock, faPersonCircleQuestion, faSignOut, faTicketAlt, faTimes, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // import { FaTicketAlt, FaUsers, FaUsersCog, FaBuilding, FaLock, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
 import ExecutivePanel from './panels/ExecutivePanel';
@@ -219,6 +219,11 @@ function Dashboard() {
             to: '/dashboard/password-requests',
             icon: <FontAwesomeIcon icon={faLock} />,
             text: 'Password Requests',
+          },
+          {
+            to: '/dashboard/user-requests',
+            icon: <FontAwesomeIcon icon={faPersonCircleQuestion} />,
+            text: 'User Requests',
           }
         );
         break;
@@ -240,11 +245,11 @@ function Dashboard() {
             icon: <FontAwesomeIcon icon={faTicketAlt} />,
             text: 'All Tickets',
           },
-          {
-            to: '/dashboard/password-requests',
-            icon: <FontAwesomeIcon icon={faLock} />,
-            text: 'Password Requests',
-          },
+          // {
+          //   to: '/dashboard/password-requests',
+          //   icon: <FontAwesomeIcon icon={faLock} />,
+          //   text: 'Password Requests',
+          // },
           {
             to: '/dashboard/overview',
             icon: <FontAwesomeIcon icon={faChartBar} />,
@@ -301,7 +306,7 @@ function Dashboard() {
         <div className="sidebar-footer">
           <div className="user-info">
             <img className="user-avatar"
-              src={user?.profile} alt='profile'
+              src={user?.profile ? user?.profile : '/img/admin.png'} alt='PF'
             />
             <div className="user-details">
               <div className="user-name">{user?.username}</div>
@@ -347,21 +352,16 @@ function Dashboard() {
                 onClick={toggleProfileDropdown}
                 aria-expanded={profileDropdownOpen}
               >
-                <img src={user?.profile} alt='profile' className="user-avatar" />
+                <img src={user?.profile ? user?.profile : '/img/admin.png'} alt='profile' className="user-avatar" />
                 <span className="hidden-sm">{user?.username}</span>
               </button>
               {profileDropdownOpen && (
                 <div className="dropdown-menu">
                   <a href="/dashboard/profile" className="dropdown-item">
-                    {/* <i className="fa-regular fa-user"></i> */}
                     <FontAwesomeIcon icon={faUser} />
                     Profile
                   </a>
-                  <a href="/dashboard/settings" className="dropdown-item">
-                    {/* <i className="fa-regular fa-gear"></i> */}
-                    <FontAwesomeIcon icon={faGear} />
-                    Settings
-                  </a>
+                 
                   <div className="dropdown-divider"></div>
                   <button onClick={handleLogout} className="dropdown-item text-error">
                     <i className="fa-regular fa-sign-out"></i>
@@ -377,7 +377,6 @@ function Dashboard() {
         <div className="page-content">
           <Routes>
             {/* Executive Routes */}
-            {/* <Route path="/tickets/*" element={<ExecutivePanel user={user} />} /> */}
             <Route path="/tickets/*" element={
               ['Team Leader', 'Manager', 'admin', 'superadmin', 'Executive'].includes(user?.designation) ?
                 (user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view="tickets" /> :
@@ -390,7 +389,7 @@ function Dashboard() {
             {/* Manager Routes */}
             <Route path="/department/*" element={<ManagerPanel user={user} />} />
             <Route path="/executives/*" element={
-              user?.designation === 'Manager' ? <ManagerPanel user={user} view="executives" /> :
+              user?.designation === 'Manager' ? <ManagerPanel user={user} view="team" /> :
                 user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view="executives" /> :
                   <NotFound />
             } />
@@ -412,6 +411,10 @@ function Dashboard() {
             <Route path="/leadership/*" element={
               user?.designation === 'admin' ? <AdminPanel user={user} view="leadership" /> : <NotFound />
             } />
+            <Route path="/user-requests/*" element={
+              user?.designation === 'admin' ? <AdminPanel user={user} view="user-requests" /> :
+                user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view="user-requests" /> : <NotFound />
+            } />
 
             {/* Super Admin Routes */}
             <Route path="/branches/*" element={
@@ -423,6 +426,7 @@ function Dashboard() {
             <Route path="/overview/*" element={
               user?.designation === 'superadmin' ? <SuperAdminPanel user={user} view="overview" /> : <NotFound />
             } />
+
 
             {/* Common Routes */}
             <Route path="/profile" element={<UserProfile user={user} />} />

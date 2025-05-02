@@ -1,6 +1,6 @@
 import express from 'express';
 import { upload, uploadToGridFs } from '../middlewares/uploadToGFS.js';
-import { addUser, createDepartment, deleteDepartment, deleteUpdateRequest, deleteUser, getDepartments, updateDepartment, updateUser } from '../controllers/adminController..js';
+import { addUser, createDepartment, deleteDepartment, deleteUpdateRequest, deleteUser, getDepartments, getExecutives, getManagers, getTeamLeaders, updateDepartment, updateUser } from '../controllers/adminController..js';
 
 const app = express();
 
@@ -12,6 +12,8 @@ app.post('/createdepartment', createDepartment);
 app.get('/department', getDepartments);
 app.delete('/deletedepartment/:id', deleteDepartment);
 app.post('/updatedepartment',updateDepartment);
-
+app.get('/managers',getManagers);
+app.get('/teamleaders',getTeamLeaders);
+app.get('/executives',getExecutives);
 
 export default app;

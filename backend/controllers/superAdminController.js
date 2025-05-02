@@ -2,26 +2,32 @@ import bcrypt from 'bcryptjs';
 import User from '../models/userModel.js';
 import UserRequests from '../models/reqModel.js';
 import Branch from '../models/branchModel.js';
+import Admin from '../models/adminModel.js';
 
 export const makeAdmin = async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json('Profile pic not found');
+        let { username, email, name, password, mobile, branches, address, designation } = req.body;
+
+        if (!Array.isArray(branches)) {
+            branches = [branches]; // agar ek hi branch aaye to bhi array bana lo
         }
-        const { username, email, name, password, mobile, branch, address, designation } = req.body;
-        if (!username || !email || !name || !password || !mobile || !branch || !address) {
+
+        if (!username || !email || !name || !password || !mobile || !address) {
             return res.status(401).json({
                 success: false,
                 message: 'Something is missing,Please cheack!'
             });
         }
 
-        const imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
+        let imageUrl;
+        if (req.file) {
+            imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
+        }
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const existUsername = await User.findOne({ username });
-        const existEmail = await User.findOne({ email });
-        const existMobile = await User.findOne({ mobile });
+        const existUsername = await Admin.findOne({ username });
+        const existEmail = await Admin.findOne({ email });
+        const existMobile = await Admin.findOne({ mobile });
         if (existUsername) {
             return res.status(400).json({
                 success: false,
@@ -40,7 +46,16 @@ export const makeAdmin = async (req, res) => {
                 message: 'Duplicate Mobile number!'
             });
         }
-        const user = await User({ username, email, name, password: hashedPassword, mobile, branch, address, profile: imageUrl, designation });
+
+        if (branches.length > 0) {
+            const updateResult = await Branch.updateMany(
+                { name: { $in: branches } },
+                { $set: { admin: username } }
+            );
+
+        }
+
+        const user = await Admin({ username, email, name, password: hashedPassword, mobile, branches, address, profile: imageUrl, designation });
         const us = await user.save();
         res.status(200).json({
             success: true,
@@ -52,15 +67,15 @@ export const makeAdmin = async (req, res) => {
     }
 }
 
-export const getAllBranches = async (req, res) => {
+export const getAllAdmins = async (req, res) => {
     try {
-        const allBranchesData = await User.find().select('-password');
+        const allBranchesData = await Admin.find().select('-password');
         res.status(200).json({
             success: true,
             allBranchesData
         });
     } catch (error) {
-        console.log('While get all branches', error);
+        console.log('While get all admins', error);
     }
 }
 
@@ -135,9 +150,9 @@ export const getBranches = async (req, res) => {
 }
 
 export const updateBranch = async (req, res) => {
-    console.log('branchid',req.body.branchid);
+    console.log('branchid', req.body.branchid);
     try {
-        
+
         const branchId = req.body.branchid;
         const branch = await Branch.findById(branchId);
         let branchUpdated = false;
@@ -185,5 +200,20 @@ export const deleteBranch = async (req, res) => {
         }
     } catch (error) {
         console.log("while deleting branch", error);
+    }
+}
+
+export const deleteAdmin = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const request = await Admin.findByIdAndDelete(id);
+        if (request) {
+            return res.status(200).json({
+                success: true,
+                message: 'User Deleted!'
+            });
+        }
+    } catch (error) {
+        console.log("while deleting user", error);
     }
 }

@@ -8,13 +8,12 @@ const ticketSchema = new mongoose.Schema({
     date: Date,
     time: String,
     priority: String,
-    deptinvolve: [
+    department: [
         {
-            name: String
+            name: String,
+            description: String
         }
     ],
-    department: String,
-    description: String,
     issuedby: String,
     status: String,
     branch: String,
@@ -28,7 +27,7 @@ const ticketSchema = new mongoose.Schema({
             }
         }
     ]
-});
+}, { timestamps: true });
 
 const Tickets = new mongoose.model('Ticket', ticketSchema);
 

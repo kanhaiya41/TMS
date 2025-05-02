@@ -15,12 +15,37 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
     mobile: initialData?.mobile || '',
     date: initialData?.date || '',
     time: initialData?.time || '',
-    priority: initialData?.priority || '',
-    department: initialData?.department || '',
-    description: initialData?.description || ''
+    priority: initialData?.priority || ''
   });
 
+  const [formDepartment, setFormDepartment] = useState(initialData?.department || [])
+
   const [errors, setErrors] = useState({});
+  const [selectedDepartment, setSelectedDepartment] = useState([]);
+
+  const handleCheckboxChange = (e) => {
+    const value = e.target.value;
+    const isChecked = e.target.checked;
+
+    if (isChecked) {
+      setSelectedDepartment(prev => [...prev, value]);
+      setFormDepartment(prev => [...prev, { name: value, description: '' }]);
+    } else {
+      setSelectedDepartment(prev => prev.filter((val) => val !== value));
+      setFormDepartment(prev => prev.filter((dep) => dep.name !== value));
+    }
+  };
+
+
+  const handleDepartmentChange = (e, index) => {
+    const { value } = e.target;
+    setFormDepartment(prev => {
+      const updated = [...prev];
+      updated[index].description = value;
+      return updated;
+    });
+  };
+
 
   //fetch department
   const [departments, setDepartments] = useState([]);
@@ -71,43 +96,45 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
 
     if (!formData.name) {
       newErrors.name = 'name is required';
+      toast.error('name is required');
     }
 
     if (!formData?.email) {
       newErrors.email = 'email is required';
+      toast.error('email is required');
     }
 
     if (!formData.subject) {
       newErrors.subject = 'subject is required';
+      toast.error('subject is required');
     }
 
     if (!formData.mobile) {
       newErrors.mobile = 'mobile is required';
+      toast.error('mobile is required');
     } else if (!formData.mobile.length === 10) {
       newErrors.mobile = 'mobile must be 10 characters';
+      toast.error('mobile must be 10 characters');
     }
 
     if (!formData?.date) {
       newErrors.date = 'date is required';
+      toast.error('date is required');
     }
 
     if (!formData.time) {
       newErrors.time = 'time is required';
+      toast.error('time is required');
     }
 
     if (!formData.priority) {
-      alert('issue');
       newErrors.priority = 'priority is required';
+      toast.error('priority is required');
     }
 
-    if (!formData.department) {
+    if (!formDepartment) {
       newErrors.department = 'department is required';
-    }
-
-    if (!formData.description) {
-      newErrors.description = 'description is required';
-    } else if (!formData.description.length > 5) {
-      newErrors.description = 'description must be at least 5 characters';
+      toast.error('department is required');
     }
 
     setErrors(newErrors);
@@ -116,28 +143,19 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let res;
     try {
       if (validateForm()) {
+        const payload = {
+          ...formData,
+          department: formDepartment,
+          issuedby: user?.username,
+          branch: user?.branch,
+          status: 'open'
+        };
 
-        const formdata = new FormData();
-        formdata.append('name', formData?.name);
-        formdata.append('email', formData?.email);
-        formdata.append('subject', formData?.subject);
-        formdata.append('mobile', formData?.mobile);
-        formdata.append('date', formData?.date);
-        formdata.append('time', formData?.time);
-        formdata.append('priority', formData?.priority);
-        formdata.append('department', formData?.department);
-        formdata.append('description', formData?.description);
-        formdata.append('issuedby', user?.username);
-        formdata.append('branch', user?.branch);
-        formdata.append('status', 'open')
-        res = await axios.post(`${URI}/executive/raiseticket`, formdata, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }).then(res=>{
+        const res = await axios.post(`${URI}/executive/raiseticket`, payload).then(r => {
+          toast.success(r?.data?.message);
+          // Reset form
           setFormData({
             name: '',
             email: '',
@@ -146,25 +164,27 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
             mobile: '',
             time: '',
             priority: '',
-            description: '',
+
           });
-          fetchAllTickets();
-          toast.success(res?.data?.message);
+          setFormDepartment([]);
         }).catch(err => {
           // Handle error and show toast
-          if (err.response && err.response.data && err.response.data.message) {
-            toast.error(err.response.data.message); // For 400, 401, etc.
+          if (err?.response && err?.response?.data && err?.response?.data.message) {
+            toast.error(err?.response?.data.message); // For 400, 401, etc.
           } else {
             toast.error("Something went wrong");
           }
         });
 
+
+
       }
     } catch (error) {
       console.log('while raising ticket', error);
-      toast?.error('error', res?.data?.message);
+      toast.error(error?.response?.data?.message || 'Something went wrong');
     }
   };
+
 
   return (
     <form onSubmit={handleSubmit} className='form'>
@@ -270,35 +290,32 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
 
       <div className="form-group">
         <label htmlFor="department" className="form-label">Department</label>
-        <select
-          id="department"
-          name="department"
-          className="form-select"
-          value={formData?.department}
-          onChange={handleChange}
-        >
-          <option selected disabled value="">--Department--</option>
+        <div className='deptcheckbox'>
           {
             departments?.map(curElem => (
-              <option value={curElem?.name}>{curElem?.name}</option>
+              <>
+                <p>{curElem?.name}</p> <input value={curElem?.name} onChange={handleCheckboxChange} type="checkbox" />
+              </>
             ))
           }
-        </select>
+        </div>
       </div>
+      {formDepartment?.map((curElem, index) => (
+        <div key={curElem?.name} className="form-group">
+          <label htmlFor="description" className="form-label">Description for {curElem?.name}</label>
+          <textarea
+            id={`description-${curElem.name}`}
+            name="description"
+            className={`form-control ${errors?.description ? 'border-error' : ''}`}
+            rows="5"
+            value={curElem.description}
+            onChange={(e) => handleDepartmentChange(e, index)}
+            placeholder="Detailed explanation of the issue"
+          ></textarea>
+          {errors?.description && <div className="text-error text-sm mt-1">{errors?.description}</div>}
+        </div>
+      ))}
 
-      <div className="form-group">
-        <label htmlFor="description" className="form-label">Description</label>
-        <textarea
-          id="description"
-          name="description"
-          className={`form-control ${errors?.description ? 'border-error' : ''}`}
-          rows="5"
-          value={formData?.description}
-          onChange={handleChange}
-          placeholder="Detailed explanation of the issue"
-        ></textarea>
-        {errors?.description && <div className="text-error text-sm mt-1">{errors?.description}</div>}
-      </div>
       <br />
       <div className="flex gap-2 justify-end mt-4">
         <button

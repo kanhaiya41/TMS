@@ -1,12 +1,19 @@
 import express from 'express'
-import { findUserForForgetPass, login, logout, reqForUpdatePassword, verifySuperAdmin } from '../controllers/authController.js';
+import { fetchUpdateProfileRequests, findUserForForgetPass, login, logout, reqForUpdatePassword, reqToEditProfile, sendMail, superAdminSignUp, updateForgetPassword, updateStatustoProfileUpdateRequest, verifySuperAdmin } from '../controllers/authController.js';
+import { upload, uploadToGridFs } from '../middlewares/uploadToGFS.js';
 
 const app = express();
 
-app.get('/findemail/:email', findUserForForgetPass);
+app.get('/findemail/:email/:designation', findUserForForgetPass);
 app.post('/reqforupdatepassword', reqForUpdatePassword);
 app.post('/login', login);
 app.get('/logout', logout);
-app.get('/verifysuperadmin',verifySuperAdmin);
+app.get('/verifysuperadmin', verifySuperAdmin);
+app.post('/reqforupdateprofile', reqToEditProfile);
+app.get('/getupdateprofilerequests', fetchUpdateProfileRequests);
+app.post('/statusupdateforuserrequest', updateStatustoProfileUpdateRequest);
+app.post('/superadminsignup', upload.single('profile'), uploadToGridFs, superAdminSignUp);
+app.post('/mailforupdatepass', sendMail);
+app.post('/updateforgetpass',updateForgetPassword);
 
 export default app;

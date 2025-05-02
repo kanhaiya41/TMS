@@ -16,6 +16,8 @@ import URI from '../../utills';
 import toast from 'react-hot-toast';
 
 function SuperAdminPanel({ user, view = 'overview' }) {
+
+  //states
   const [branches, setBranches] = useState([]);
   const [admins, setAdmins] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -29,12 +31,10 @@ function SuperAdminPanel({ user, view = 'overview' }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [deleteType, setDeleteType] = useState('');
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [comment, setComment] = useState('');
   const [departments, setDepartments] = useState([]);
-
   const [allUsers, setAllUsers] = useState([]);
 
   // Statistics
@@ -48,66 +48,28 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     pendingPasswordRequests: 0
   });
 
-  // fetch password requests
-  const getAllRequests = async () => {
-    try {
-      const res = await axios.get(`${URI}/superadmin/getalladminrequests`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res=>{
-        setPasswordRequests(res?.data?.allRequests);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
-    } catch (error) {
-      console.log("while geting all admin requests", error);
-    }
-  }
-
   useEffect(() => {
-    getAllRequests();
-  }, []);
+    const stats = {
+      totalBranches: branches?.length,
+      totalDepartments: departments.length,
+      totalUsers: allUsers?.length,
+      totalTickets: tickets?.length,
+      openTickets: tickets.filter(t => t.status === 'open').length,
+      resolvedTickets: tickets.filter(t => t.status === 'resolved').length,
+      pendingPasswordRequests: passwordRequests?.length
+    };
+    setStats(stats);
+  }, [allUsers, tickets, passwordRequests, departments]);
 
-  //fetch department
-
-  const fetchDepartment = async () => {
-    try {
-      const res = await axios.get(`${URI}/admin/department`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res=>{
-        setDepartments(res?.data?.departmentes)
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
-    } catch (error) {
-      console.log('while geting branches for super admin', error);
-    }
-  }
-
-  //fetch users
+  //fetching APIs
   const fetchAllUsers = async () => {
     try {
-      const res = await axios.get(`${URI}/superadmin/getbranches`, {
+      const res = await axios.get(`${URI}/superadmin/getadmins`, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
-        setAllUsers(
-          res?.data?.allBranchesData?.filter((us) => us?.designation !== 'superadmin')
-        );
+      }).then(res => {
+        setAllUsers(res?.data?.allBranchesData);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -121,14 +83,13 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     }
   }
 
-  // fetch tickets
   const fetchAllTickets = async () => {
     try {
       const res = await axios.get(`${URI}/executive/getalltickets`, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         setTickets(res?.data?.data);
       }).catch(err => {
         // Handle error and show toast
@@ -150,8 +111,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
-        setBranches(res?.data?.branches)
+      }).then(res => {
+        setBranches(res?.data?.branches);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -165,6 +126,51 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     }
   }
 
+  //fetch department
+  const fetchDepartment = async () => {
+    try {
+      const res = await axios.get(`${URI}/admin/department`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        const matchedExecutives = res?.data?.departmentes;
+        setDepartments(matchedExecutives);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while geting branches for super admin', error);
+    }
+  }
+
+  useEffect(() => {
+    fetchAllTickets();
+    fetchAllUsers();
+    fetchBranches();
+    fetchDepartment();
+    // Load all data
+    // setBranches(mockBranches);
+
+    // Get admins
+    const adminUsers = allUsers?.filter(u => u.designation === 'admin');
+    setAdmins(adminUsers);
+
+    // Get all tickets
+    // setTickets(mockTickets);
+
+    // Get password requests from admins
+    const adminIds = adminUsers.map(admin => admin.id);
+
+
+  }, []);
+
+  //normall actions
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedTicket(null);
@@ -175,6 +181,93 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     setIsModalOpen(true);
   };
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const handleEditBranch = (branchId) => {
+    const branchToEdit = branches.find(branch => branch.id === branchId);
+    setSelectedBranch(branchToEdit);
+    setShowBranchForm(true);
+  };
+
+  const confirmDeleteBranch = (branchId) => {
+    const branchToDelete = branches.find(branch => branch._id === branchId);
+    setItemToDelete(branchToDelete);
+    setDeleteType('branch');
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleEditAdmin = (adminId) => {
+    const adminToEdit = allUsers.find(admin => admin._id === adminId);
+    setSelectedUser(adminToEdit);
+    setShowUserForm(true);
+  };
+
+  //filters
+  // Filter branches based on search term
+  const filteredBranches = branches.filter(branch =>
+    branch.name?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    branch.location?.toLowerCase().includes(searchTerm?.toLowerCase())
+  );
+
+  // Filter admins based on search term
+  const filteredAdmins = allUsers?.filter(admin =>
+    admin.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+    admin.email?.toLowerCase().includes(searchTerm?.toLowerCase())
+  );
+
+  // Filter tickets based on search term and status
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch =
+      ticket?.branch?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      ticket?.subject?.toLowerCase().includes(searchTerm?.toLowerCase())
+
+    const matchesStatus = filterStatus === 'all' || ticket?.status === filterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
+
+  //not worked
+  const handleDeleteAdmin = () => {
+    const updatedAdmins = admins.filter(admin => admin.id !== itemToDelete.id);
+    // setAdmins(updatedAdmins);
+    setIsDeleteModalOpen(false);
+    setItemToDelete(null);
+    alert('Admin deleted successfully!');
+  };
+
+  const handleUpdateTicketStatus = async(ticketId, status) => {
+    try {
+      const res = await axios.post(`${URI}/executive/updateticketstatus`, { ticketId, status }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        fetchAllTickets();
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err?.response && err?.response?.data && err?.response?.data.message) {
+          toast.error(err?.response?.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+    } catch (error) {
+      console.log('error while ticket updation', error);
+    }
+  };
+
+
+  //action APIs
   //add comment on ticket
   const addCommentOnTicket = async () => {
     try {
@@ -184,7 +277,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         fetchAllTickets();
         handleCloseModal();
         setComment('');
@@ -202,102 +295,13 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     }
   }
 
-
-  useEffect(() => {
-    fetchAllTickets();
-    fetchAllUsers();
-    fetchBranches();
-    fetchDepartment();
-    // Load all data
-    // setBranches(mockBranches);
-
-    // Get admins
-    const adminUsers = allUsers?.filter(u => u.designation === 'admin');
-    setAdmins(adminUsers);
-    console.log(adminUsers)
-
-    // Get all tickets
-    // setTickets(mockTickets);
-
-    // Get password requests from admins
-    const adminIds = adminUsers.map(admin => admin.id);
-    const adminPasswordRequests = mockPasswordRequests.filter(req =>
-      adminIds.includes(req.userId)
-    );
-    // setPasswordRequests(adminPasswordRequests);
-
-    
-  }, []);
-
-  useEffect(() => {
-    const stats = {
-      totalBranches: branches?.length,
-      totalDepartments: departments.length,
-      totalUsers: allUsers?.length,
-      totalTickets: tickets?.length,
-      openTickets: tickets.filter(t => t.status === 'open').length,
-      resolvedTickets: tickets.filter(t => t.status === 'resolved').length,
-      pendingPasswordRequests: passwordRequests?.length
-    };
-    setStats(stats);
-  }, [allUsers, tickets, passwordRequests, departments]);
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
-  const handleCreateBranch = (branchData) => {
-    // In a real app, this would be an API call
-    alert('admins'+admins)
-    const newBranch = {
-      id: branches.length + 1,
-      name: branchData.name,
-      location: branchData.location,
-      adminId: branchData.adminId || null,
-      createdAt: new Date().toISOString()
-    };
-
-    // setBranches([...branches, newBranch]);
-    setShowBranchForm(false);
-    alert('Branch created successfully!');
-  };
-
-  const handleEditBranch = (branchId) => {
-    const branchToEdit = branches.find(branch => branch.id === branchId);
-    setSelectedBranch(branchToEdit);
-    setShowBranchForm(true);
-  };
-
-  const handleUpdateBranch = (branchData) => {
-    const updatedBranches = branches.map(branch =>
-      branch.id === selectedBranch.id ? { ...branch, ...branchData } : branch
-    );
-
-    // setBranches(updatedBranches);
-    setSelectedBranch(null);
-    setShowBranchForm(false);
-    alert('Branch updated successfully!');
-  };
-
-  const confirmDeleteBranch = (branchId) => {
-    const branchToDelete = branches.find(branch => branch._id === branchId);
-    setItemToDelete(branchToDelete);
-    setDeleteType('branch');
-    setIsDeleteModalOpen(true);
-  };
-
   const handleDeleteBranch = async () => {
     try {
       const res = await axios.delete(`${URI}/superadmin/deletebranch/${itemToDelete?._id}`, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         fetchBranches();
         setIsDeleteModalOpen(false);
         setItemToDelete(null);
@@ -315,31 +319,13 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     }
   };
 
-
-  const handleEditAdmin = (adminId) => {
-    const adminToEdit = allUsers.find(admin => admin._id === adminId);
-    setSelectedUser(adminToEdit);
-    setShowUserForm(true);
-  };
-
-  const handleUpdateAdmin = (userData) => {
-    const updatedAdmins = admins.map(admin =>
-      admin.id === selectedUser.id ? { ...admin, ...userData } : admin
-    );
-
-    // setAdmins(updatedAdmins);
-    setSelectedUser(null);
-    setShowUserForm(false);
-    alert('Admin updated successfully!');
-  };
-
   const confirmDeleteAdmin = async (adminId) => {
     try {
-      const res = await axios.delete(`${URI}/admin/deleteuser/${adminId}`, {
+      const res = await axios.delete(`${URI}/superadmin/deleteadmin/${adminId}`, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res=>{
+      }).then(res => {
         fetchAllUsers();
         toast.success(res?.data?.message);
       }).catch(err => {
@@ -355,96 +341,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     }
   };
 
-  const handleDeleteAdmin = () => {
-    const updatedAdmins = admins.filter(admin => admin.id !== itemToDelete.id);
-    // setAdmins(updatedAdmins);
-    setIsDeleteModalOpen(false);
-    setItemToDelete(null);
-    alert('Admin deleted successfully!');
-  };
-
-  const handleApprovePasswordRequest = (requestId) => {
-    const updatedRequests = passwordRequests.map(req =>
-      req.id === requestId ?
-        {
-          ...req,
-          status: 'approved',
-          resolvedBy: user.id,
-          resolvedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        } : req
-    );
-
-    setPasswordRequests(updatedRequests);
-    alert('Password request approved!');
-  };
-
-  const handleRejectPasswordRequest = (requestId) => {
-    const updatedRequests = passwordRequests.map(req =>
-      req.id === requestId ?
-        {
-          ...req,
-          status: 'rejected',
-          resolvedBy: user.id,
-          resolvedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        } : req
-    );
-
-    setPasswordRequests(updatedRequests);
-    alert('Password request rejected!');
-  };
-
-  // Filter branches based on search term
-  const filteredBranches = branches.filter(branch =>
-    branch.name?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    branch.location?.toLowerCase().includes(searchTerm?.toLowerCase())
-  );
-
-  // Filter admins based on search term
-  const filteredAdmins = allUsers?.filter(admin =>
-    admin?.designation === 'admin' &&
-    admin.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    admin.email?.toLowerCase().includes(searchTerm?.toLowerCase())
-  );
-
-  // Filter password requests based on search term
-  const filteredPasswordRequests = passwordRequests.filter(req => {
-    const admin = admins.find(a => a.id === req.userId);
-    return admin && (
-      admin.name?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      admin.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      req.reason?.toLowerCase().includes(searchTerm?.toLowerCase())
-    );
-  });
-
-  // Filter tickets based on search term and status
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch =
-      ticket?.branch?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      ticket?.subject?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      ticket?.description?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-      ticket?.department?.toLowerCase().includes(searchTerm?.toLowerCase());
-
-    const matchesStatus = filterStatus === 'all' || ticket?.status === filterStatus;
-
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleUpdateTicketStatus = (ticketId, newStatus) => {
-    const updatedTickets = tickets.map(ticket =>
-      ticket.id === ticketId ?
-        {
-          ...ticket,
-          status: newStatus,
-          updatedAt: new Date().toISOString()
-        } : ticket
-    );
-
-    setTickets(updatedTickets);
-    alert('Ticket status updated successfully!');
-  };
-
+  //components for render
   // Render different content based on the view
   const renderContent = () => {
     switch (view) {
@@ -452,8 +349,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
         return renderBranchesView();
       case 'admins':
         return renderAdminsView();
-      case 'password-requests':
-        return renderPasswordRequestsView();
+      // case 'password-requests':
+      //   return renderPasswordRequestsView();
       case 'tickets':
         return renderTicketsView();
       case 'overview':
@@ -596,8 +493,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                 </tr>
               </thead>
               <tbody>
-                {branches.map(branch => {
-                  const branchAdmin = admins.find(a => a.id === branch.adminId);
+                {branches?.map(branch => {
+                  const branchAdmin = allUsers?.find(a => a?.username === branch?.admin);
                   const branchDepartments = mockDepartments.filter(d => d.branchId === branch.id);
                   const branchTickets = tickets.filter(t =>
                     branchDepartments.some(d => d.name === t.department)
@@ -609,8 +506,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                       <td>{branch.location}</td>
                       <td>
                         {branchAdmin ? (
-                          <div className="flex items-center gap-2">
-                            <div className="user-avatar">{branchAdmin.avatar}</div>
+                          <div className="flex items-center gap-2" style={{ display: 'flex', justifyContent: 'center' }}>
+                            <img className="user-avatar" src={branchAdmin?.profile ? branchAdmin?.profile : '/img/admin.png'} alt="" />
                             <span>{branchAdmin.name}</span>
                           </div>
                         ) : <span className="text-muted">Not assigned</span>}
@@ -694,23 +591,23 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                     </thead>
                     <tbody>
                       {filteredBranches.map(branch => {
-                        const branchAdmin = admins.find(a => a.id === branch.adminId);
-                        const branchDepartments = mockDepartments.filter(d => d.branchId === branch.id);
+                        const branchAdmin = allUsers?.find(a => a?.username === branch?.admin);
+                        const branchDepartments = departments.filter(d => d?.branch === branch?.name);
 
                         return (
                           <tr key={branch.id}>
-                            <td className="font-medium">{branch.name}</td>
+                            <td className="font-medium">{branch?.name}</td>
                             <td>{branch.location}</td>
                             <td>
                               {branchAdmin ? (
                                 <div className="flex items-center gap-2">
-                                  <div className="user-avatar">{branchAdmin.avatar}</div>
+                                  <img className="user-avatar" src={branchAdmin?.profile ? branchAdmin?.profile : '/img/admin.png'} alt="PF" />
                                   <span>{branchAdmin.name}</span>
                                 </div>
                               ) : <span className="text-muted">Not assigned</span>}
                             </td>
-                            <td>{branchDepartments.length}</td>
-                            <td>{formatDate(branch.createdAt)}</td>
+                            <td>{branchDepartments?.length}</td>
+                            <td>{formatDate(branch?.createdAt)}</td>
                             <td>
                               <div className="flex gap-2">
                                 <button
@@ -804,15 +701,13 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                       <tr>
                         <th>Name</th>
                         <th>Email</th>
-                        <th>Branch</th>
+                        {/* <th>Branch</th> */}
                         <th>Joined</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAdmins.map(admin => {
-
-
+                      {filteredAdmins?.map(admin => {
                         return (
                           <>
                             {
@@ -820,13 +715,12 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                               <tr key={admin.id}>
                                 <td>
                                   <div className="flex items-center gap-2">
-                                    <img src={admin?.profile} className="user-avatar" alt="" />
-                                    {/* <div className="user-avatar">{admin.avatar}</div> */}
+                                    <img src={admin?.profile ? admin?.profile : '/img/admin.png'} className="user-avatar" alt="PF" />
                                     <span>{admin?.name}</span>
                                   </div>
                                 </td>
                                 <td>{admin.email}</td>
-                                <td>{admin?.branch}</td>
+                                {/* <td>{admin?.branches}</td> */}
                                 {/* <td>{adminBranch ? adminBranch.name : 'Not assigned'}</td> */}
                                 <td>{formatDate(admin.createdAt)}</td>
                                 <td>
@@ -842,6 +736,11 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                                       onClick={() => confirmDeleteAdmin(admin._id)}
                                     >
                                       Delete
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-error"
+                                    >
+                                      View
                                     </button>
                                   </div>
                                 </td>
@@ -863,106 +762,6 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           </div>
         </>
       )}
-    </>
-  );
-
-  const renderPasswordRequestsView = () => (
-    <>
-      <div className="mb-4">
-        <h2 className="text-xl font-bold">Admin Password Update Requests</h2>
-        <p className="text-muted">Manage password change requests from admins</p>
-      </div>
-
-      <div className="card mb-4">
-        <div className="card-body">
-          <div className="form-group">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Search password requests"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-body p-0">
-          {filteredPasswordRequests.length > 0 ? (
-            <div className="table-responsive">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Admin</th>
-                    <th>Branch</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPasswordRequests.map(request => {
-                    const requestAdmin = admins.find(a => a.id === request.userId);
-                    const adminBranch = requestAdmin ? branches.find(b => b.adminId === requestAdmin.id) : null;
-
-                    return (
-                      <tr key={request.id}>
-                        <td>#{request.id}</td>
-                        <td>
-                          {requestAdmin ? (
-                            <div className="flex items-center gap-2">
-                              <div className="user-avatar">{requestAdmin.avatar}</div>
-                              <span>{requestAdmin.name}</span>
-                            </div>
-                          ) : 'Unknown Admin'}
-                        </td>
-                        <td>{adminBranch ? adminBranch.name : 'Not assigned'}</td>
-                        <td>{request.reason}</td>
-                        <td>
-                          <span className={`badge ${request.status === 'pending' ? 'badge-warning' :
-                            request.status === 'approved' ? 'badge-success' :
-                              'badge-error'
-                            }`}>
-                            {request.status?.charAt(0).toUpperCase() + request.status?.slice(1)}
-                          </span>
-                        </td>
-                        <td>{formatDate(request.createdAt)}</td>
-                        <td>
-                          {request.status === 'pending' ? (
-                            <div className="flex gap-2">
-                              <button
-                                className="btn btn-sm btn-success"
-                                onClick={() => handleApprovePasswordRequest(request.id)}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                className="btn btn-sm btn-error"
-                                onClick={() => handleRejectPasswordRequest(request.id)}
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <button className="btn btn-sm btn-outline">View</button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-4 text-center">
-              <p className="text-muted">No password requests found.</p>
-            </div>
-          )}
-        </div>
-      </div>
     </>
   );
 
@@ -1007,14 +806,14 @@ function SuperAdminPanel({ user, view = 'overview' }) {
 
       <div className="card">
         <div className="card-body p-0">
-          {filteredTickets.length > 0 ? (
+          {filteredTickets?.length > 0 ? (
             <div className="table-responsive">
               <table className="table">
                 <thead>
                   <tr>
                     <th>ID</th>
                     <th>Title</th>
-                    <th>Department</th>
+                    {/* <th>Department</th> */}
                     <th>Branch</th>
                     <th>Status</th>
                     <th>Priority</th>
@@ -1032,7 +831,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                       <tr key={index + 1}>
                         <td>#{index + 1}</td>
                         <td>{ticket?.subject}</td>
-                        <td>{ticket?.department}</td>
+                        {/* <td>{ticket?.department}</td> */}
                         <td>{ticket?.branch}</td>
                         <td>
                           <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
@@ -1060,7 +859,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                                 {ticket?.status === 'open' && (
                                   <button
                                     className="btn btn-sm btn-primary"
-                                    onClick={() => handleUpdateTicketStatus(ticket?.id, 'in-progress')}
+                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
                                   >
                                     Start
                                   </button>
@@ -1068,7 +867,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                                 {ticket?.status === 'in-progress' && (
                                   <button
                                     className="btn btn-sm btn-success"
-                                    onClick={() => handleUpdateTicketStatus(ticket?.id, 'resolved')}
+                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
                                   >
                                     Resolve
                                   </button>
@@ -1173,11 +972,15 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                       Created: {formatDate(selectedTicket?.date)}
                     </p>
                   </div>
+                  {
+                    selectedTicket?.department?.map(curElem => (
+                      <div className="mb-4">
+                        <h5 className="font-bold mb-2">{curElem?.name}</h5>
+                        <p>{curElem?.description}</p>
+                      </div>
+                    ))
+                  }
 
-                  <div className="mb-4">
-                    <h5 className="font-bold mb-2">Description</h5>
-                    <p>{selectedTicket?.description}</p>
-                  </div>
 
                   <div className="mb-4">
                     <h5 className="font-bold mb-2">Comments ({selectedTicket?.comments?.length})</h5>

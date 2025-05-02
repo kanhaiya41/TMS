@@ -158,6 +158,9 @@
 
 .form-group {
   margin-bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: baseline;
 }
 
 .form-label {
@@ -180,6 +183,30 @@
   border: var(--glass-border);
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
+}
+
+
+.deptcheckbox {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 5% 0 1%;
+  color: var(--color-text);
+  background-color: var(--glass-background);
+  width: 100%;
+
+}
+
+
+
+.deptcheckbox p {
+  display: flex;
+  gap: 12px;
+}
+
+.deptcheckbox input {
+  width: 15px;
 }
 
 .form-control:focus {
@@ -415,6 +442,7 @@
   color: var(--color-text);
   border-collapse: separate;
   border-spacing: 0;
+  
 }
 
 .table th,
@@ -424,6 +452,7 @@
   border-bottom: var(--glass-border);
   transition: background-color var(--transition-fast);
   
+
 }
 
 .table thead th {
@@ -431,11 +460,14 @@
   text-align: left;
   border-bottom: 2px solid var(--color-primary);
   color: var(--color-primary);
+  text-align: center;
+  
 }
 
 .table tbody tr {
   transition: all var(--transition-fast);
   
+
 }
 
 .table tbody tr:hover {
@@ -448,10 +480,12 @@
 .table-sm td {
   padding: var(--space-2);
   
+
 }
 
 .table-bordered {
   border: var(--glass-border);
+  
 }
 
 .table-bordered th,
