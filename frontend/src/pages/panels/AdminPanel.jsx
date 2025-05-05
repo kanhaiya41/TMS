@@ -206,7 +206,7 @@ function AdminPanel({ view = 'departments' }) {
           'Content-Type': 'application/json'
         }
       }).then(r => {
-        setUserRequest(r?.data?.requests?.filter((req) => req?.designation === 'Manager' || req?.designation === 'Team Leader'));
+        setUserRequest(r?.data?.requests?.filter((req)=>user?.branches?.includes(req.branch)));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -573,6 +573,28 @@ function AdminPanel({ view = 'departments' }) {
     }
   };
 
+  const statusUpdateforUserRequest = async (requestId, status) => {
+    try {
+      const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        fetchEditProfileRequest();
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while status update for user request');
+    }
+  }
+
 
   // Render different content based on the view
   const renderContent = () => {
@@ -794,8 +816,8 @@ function AdminPanel({ view = 'departments' }) {
                     <thead>
                       <tr>
                         <th>Name</th>
-                        <th>Email</th>
                         <th>Department</th>
+                        <th>Branch</th>
                         <th>Joined</th>
                         <th>Actions</th>
                       </tr>
@@ -813,8 +835,9 @@ function AdminPanel({ view = 'departments' }) {
                                   <span>{tl?.username}</span>
                                 </div>
                               </td>
-                              <td>{tl?.email}</td>
-                              <td>{tl?.department}</td>
+                              
+                              <td>{tl?.department ? tl?.department: 'Not Assigned'}</td>
+                              <td>{tl?.branch}</td>
                               <td>{formatDate(tl?.createdAt)}</td>
                               <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <div className="flex gap-2">
@@ -922,8 +945,9 @@ function AdminPanel({ view = 'departments' }) {
                     <thead>
                       <tr>
                         <th>Name</th>
-                        <th>Email</th>
+                        
                         <th>Department</th>
+                        <th>Branch</th>
                         <th>Joined</th>
                         <th>Actions</th>
                       </tr>
@@ -941,8 +965,9 @@ function AdminPanel({ view = 'departments' }) {
                                   <span>{m?.username}</span>
                                 </div>
                               </td>
-                              <td>{m?.email}</td>
+                              
                               <td>{m?.department}</td>
+                              <td>{m?.branch}</td>
                               <td>{formatDate(m.createdAt)}</td>
                               <td>
                                 <div className="flex gap-2">
@@ -1222,28 +1247,6 @@ function AdminPanel({ view = 'departments' }) {
     </>
   );
 
-  const statusUpdateforUserRequest = async (requestId, status) => {
-    try {
-      const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(r => {
-        fetchEditProfileRequest();
-        toast.success(r?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
-    } catch (error) {
-      console.log('while status update for user request');
-    }
-  }
-
   const renderUserRequestsView = () => (
     <>
       <div className="mb-4">
@@ -1285,12 +1288,12 @@ function AdminPanel({ view = 'departments' }) {
                   {userRequest?.map((request, index) => {
                     return (
                       <>
-                        <tr key={request?.id}>
+                        <tr key={request?.id} >
 
-                          <td>
+                          <td style={{ display: 'flex', justifyContent: 'center' }}>
 
                             <div className="flex items-center gap-2">
-                              <img src={request?.profile} className='user-avatar' alt="PF" />
+                              <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
                               <span>{request?.username}</span>
                             </div>
 
@@ -1300,7 +1303,7 @@ function AdminPanel({ view = 'departments' }) {
                           </td>
                           <td>{request?.department}</td>
                           <td>{request?.reqto}</td>
-                          <td>
+                          <td style={{display:'flex',justifyContent:'center'}}>
                             {/* {request?.status === 'pending' ? ( */}
                             <div className="flex gap-2">
                               {

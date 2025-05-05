@@ -30,6 +30,8 @@ function ManagerPanel({ user, view = 'branch' }) {
   const [userRole, setUserRole] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [userRequest, setUserRequest] = useState();
+
 
   const location = useLocation();
 
@@ -145,12 +147,34 @@ function ManagerPanel({ user, view = 'branch' }) {
     }
   }
 
+  const fetchEditProfileRequest = async () => {
+    try {
+      const res = await axios.get(`${URI}/auth/getupdateprofilerequests`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        setUserRequest(r?.data?.requests?.filter((req) => user?.branch === req.branch && (req?.designation === 'Team Leader' || req?.designation === 'Executive')));
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while fetching edit profile request', error);
+    }
+  }
+
   useEffect(() => {
     fetchAllTeamLeaders();
     fetchAllUsers();
     fetchAllTickets();
     fetchDepartment();
     getAllRequests();
+    fetchEditProfileRequest();
   }, [])
 
   const formatDate = (dateString) => {
@@ -326,6 +350,28 @@ function ManagerPanel({ user, view = 'branch' }) {
     );
   });
 
+  const statusUpdateforUserRequest = async (requestId, status) => {
+    try {
+      const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        fetchEditProfileRequest();
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while status update for user request');
+    }
+  }
+
   const renderContent = () => {
     switch (view) {
       case 'branch':
@@ -336,6 +382,8 @@ function ManagerPanel({ user, view = 'branch' }) {
         return renderTicketsView();
       case 'password-requests':
         return renderPasswordRequestsView();
+      case 'user-requests':
+        return renderUserRequestsView();
       default:
         return renderBranchOverview();
     }
@@ -950,27 +998,27 @@ function ManagerPanel({ user, view = 'branch' }) {
                           <td>{formatDate(request.createdAt)}</td>
                           <td>
                             {/* {request.status === 'pending' ? ( */}
-                              <div className="flex gap-2">
-                                <button
-                                  className="btn btn-sm btn-success"
-                                  onClick={() => {
-                                    setSelectedUser(request);
-                                    setUserRole('Team Leader');
-                                    setShowUserForm(true);
-                                  }}
-                                >
+                            <div className="flex gap-2">
+                              <button
+                                className="btn btn-sm btn-success"
+                                onClick={() => {
+                                  setSelectedUser(request);
+                                  setUserRole('Team Leader');
+                                  setShowUserForm(true);
+                                }}
+                              >
 
-                                  <FontAwesomeIcon icon={faEdit}/>
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-error"
-                                  onClick={() => deleteUpdateRequest(request?._id)}
-                                >
-                                  <FontAwesomeIcon icon={faTrash}/>
-                                </button>
-                              </div>
+                                <FontAwesomeIcon icon={faEdit} />
+                              </button>
+                              <button
+                                className="btn btn-sm btn-error"
+                                onClick={() => deleteUpdateRequest(request?._id)}
+                              >
+                                <FontAwesomeIcon icon={faTrash} />
+                              </button>
+                            </div>
                             {/* ) : ( */}
-                              {/* <button className="btn btn-sm btn-outline">View</button> */}
+                            {/* <button className="btn btn-sm btn-outline">View</button> */}
                             {/* )} */}
                           </td>
                         </tr>
@@ -987,6 +1035,110 @@ function ManagerPanel({ user, view = 'branch' }) {
           </div>
         )
         }
+      </div>
+    </>
+  );
+
+  const renderUserRequestsView = () => (
+    <>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold">User Requests</h2>
+        <p className="text-muted">Manage requests from team leaders and managers</p>
+      </div>
+
+      <div className="card mb-4">
+        <div className="card-body">
+          <div className="form-group">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search password requests"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+
+        <div className="card-body p-0">
+          {userRequest?.length > 0 ? (
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Department</th>
+                    <th>Req. to</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userRequest?.map((request, index) => {
+                    return (
+                      <>
+                        <tr key={request?.id} >
+
+                          <td style={{ display: 'flex', justifyContent: 'center' }}>
+
+                            <div className="flex items-center gap-2">
+                              <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
+                              <span>{request?.username}</span>
+                            </div>
+
+                          </td>
+                          <td>
+                            {request?.designation}
+                          </td>
+                          <td>{request?.department}</td>
+                          <td>{request?.reqto}</td>
+                          <td style={{ display: 'flex', justifyContent: 'center' }}>
+                            {/* {request?.status === 'pending' ? ( */}
+                            <div className="flex gap-2">
+                              {
+                                request?.status === 'pending' ?
+                                  <>
+                                    <button
+                                      className="btn btn-sm btn-success"
+                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow')}
+                                    >Accept
+                                    </button>
+                                    <button
+                                      className="btn btn-sm btn-error"
+                                      onClick={() => deleteUpdateRequest(request?._id)}
+                                    >
+                                      Delete
+                                    </button>
+                                  </> :
+                                  <button
+                                    className="btn btn-sm btn-error"
+                                  // onClick={() => deleteUpdateRequest(request?._id)}
+                                  >
+                                    View
+                                  </button>
+                              }
+                            </div>
+
+                          </td>
+                        </tr>
+
+                      </>
+
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-4 text-center">
+              <p className="text-muted">No password requests found.</p>
+            </div>
+          )}
+        </div>
+
       </div>
     </>
   );

@@ -12,8 +12,12 @@ function UserProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name,
-    email: user?.email
+    email: user?.email,
+    mobile: user?.mobile
   });
+  const [profile, setProfile] = useState(null);
+
+
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -22,7 +26,7 @@ function UserProfile() {
   });
   const [errors, setErrors] = useState({});
 
-  const [userRequest, setUserRequest] = useState({});
+  const [userRequest, setUserRequest] = useState([]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,39 +60,22 @@ function UserProfile() {
     }
   };
 
-  const validateProfileForm = () => {
-    const newErrors = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const validatePasswordForm = () => {
     const newErrors = {};
 
-    if (!passwordData.currentPassword) {
+    if (!passwordData?.currentPassword) {
       newErrors.currentPassword = 'Current password is required';
     }
 
-    if (!passwordData.newPassword) {
+    if (!passwordData?.newPassword) {
       newErrors.newPassword = 'New password is required';
-    } else if (passwordData.newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters';
+    } else if (passwordData?.newPassword.length < 6) {
+      newErrors.newPassword = 'Password must be at least 6 characters';
     }
 
-    if (!passwordData.confirmPassword) {
+    if (!passwordData?.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
-    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+    } else if (passwordData?.newPassword !== passwordData?.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
@@ -96,17 +83,88 @@ function UserProfile() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (validateProfileForm()) {
-      // In a real app, this would save to the server
-      alert('Profile updated successfully!');
-      setIsEditing(false);
+  const statusUpdateforUserRequest = async (requestId, status) => {
+    try {
+      const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        fetchEditProfileRequest();
+        // toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while status update for user request');
     }
-  };
+  }
 
-  const handlePasswordSubmit = (e) => {
+  const updateUser = async (e) => {
+    try {
+      e.preventDefault();
+
+      const formdata = new FormData();
+      // formdata.append('username', formData?.username);
+      formdata.append('email', formData?.email);
+      formdata.append('name', formData?.name);
+      // formdata.append('password', formData?.password);
+      formdata.append('mobile', formData?.mobile);
+      // formdata.append('address', formData?.address);
+      formdata.append('profile', profile);
+      formdata.append('designation', user?.designation);
+
+      // formdata.append('branches', formData?.branches);
+      // formdata.append('department', formData?.department);
+      // formdata.append('branch', formData?.branch);
+      formdata.append('userid', user?._id);
+
+      const activeRequest = userRequest.find(r => r.status === 'allow');
+
+      const res = await axios.post(`${URI}/admin/updateuser`, formdata, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }).then(async (res) => {
+        // fetchAllUsers();
+        if (!user?.designation?.includes('admin')) {
+          await statusUpdateforUserRequest(activeRequest?._id, 'expired');
+        }
+        setFormData({
+          username: '',
+          email: '',
+          name: '',
+          password: '',
+          cpassword: '',
+          mobile: null,
+          department: '',
+          address: ''
+        });
+        setProfile(null);
+        setIsEditing(false);
+        cancelEdit();
+        toast.success(res?.data?.message);
+
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+    } catch (error) {
+      console.log("while updating user");
+    }
+  }
+
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
 
     if (validatePasswordForm()) {
@@ -114,24 +172,35 @@ function UserProfile() {
 
       // Create new password request
       const newRequest = {
-        id: mockPasswordRequests.length + 1,
-        userId: user?.id,
-        reason: 'User initiated password change',
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        resolvedBy: null,
-        resolvedAt: null
+        id: user?._id,
+        currentPassword: passwordData?.currentPassword,
+        newPassword: passwordData?.newPassword
       };
 
-      // In a real app, this would be added to the database
-      alert('Password update request submitted successfully!');
-      setShowPasswordForm(false);
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
+      const activeRequest = userRequest.find(r => r.status === 'allow');
+
+      const res = await axios.post(`${URI}/auth/updatepassword`, newRequest, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(async (r) => {
+        await statusUpdateforUserRequest(activeRequest?._id, 'expired');
+        setShowPasswordForm(false);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
       });
+
     }
   };
 
@@ -139,12 +208,14 @@ function UserProfile() {
     setIsEditing(false);
     setFormData({
       name: user?.name,
-      email: user?.email
+      email: user?.email,
+      mobile: user?.mobile
     });
     setErrors({});
   };
 
   const cancelPasswordChange = () => {
+
     setShowPasswordForm(false);
     setPasswordData({
       currentPassword: '',
@@ -171,7 +242,7 @@ function UserProfile() {
         }
       }).then(r => {
         setUserRequest(r?.data?.requests?.filter((req) => req?.email === user?.email));
-        console.log('userid=', user?.email, 'requestId=', r?.data?.requests);
+        // console.log('userid=', user?.email, 'requestId=', r?.data?.requests);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -187,6 +258,7 @@ function UserProfile() {
 
   useEffect(() => {
     fetchEditProfileRequest();
+
   }, []);
 
   const ReqToEditProfile = async (reqto, status) => {
@@ -300,7 +372,7 @@ function UserProfile() {
           {isEditing ? (
             <div className="card-body">
               <h3 className="mb-3">Edit Profile</h3>
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={updateUser}>
                 <div className="form-group">
                   <label htmlFor="name" className="form-label">Full Name</label>
                   <input
@@ -325,6 +397,37 @@ function UserProfile() {
                     onChange={handleChange}
                   />
                   {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
+                </div>
+
+
+
+                <div className="form-group">
+                  <label htmlFor="mobile" className="form-label">Mobile Number</label>
+                  <input
+                    type="number"
+                    id="mobile"
+                    name="mobile"
+                    className={`form-control ${errors.mobile ? 'border-error' : ''}`}
+                    value={formData.mobile}
+                    onChange={handleChange}
+                  />
+                  {errors.mobile && <div className="text-error text-sm mt-1">{errors.mobile}</div>}
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="" className="form-label">Profile Picture</label>
+                  <label htmlFor="profile" className='form-label' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '2%', borderRadius: '12px' }}>{profile ? profile?.name : 'Upload a Profile Picture'}</label>
+                  <input
+                    type="file"
+                    id="profile"
+                    name="profile"
+                    style={{ display: 'none' }}
+                    className=''
+                    // value={profile}
+                    onChange={(e) => setProfile(e.target.files[0])}
+                    placeholder="Enter full name"
+                  />
+                  {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
                 </div>
 
                 <div className="flex gap-2 justify-end mt-4">
@@ -369,12 +472,12 @@ function UserProfile() {
                     type="password"
                     id="newPassword"
                     name="newPassword"
-                    className={`form-control ${errors.newPassword ? 'border-error' : ''}`}
-                    value={passwordData.newPassword}
+                    className={`form-control ${errors?.newPassword ? 'border-error' : ''}`}
+                    value={passwordData?.newPassword}
                     onChange={handlePasswordChange}
                   />
                   {errors.newPassword && (
-                    <div className="text-error text-sm mt-1">{errors.newPassword}</div>
+                    <div className="text-error text-sm mt-1">{errors?.newPassword}</div>
                   )}
                 </div>
 
@@ -414,7 +517,7 @@ function UserProfile() {
                     type="submit"
                     className="btn btn-primary"
                   >
-                    Submit Request
+                    Submit
                   </button>
                 </div>
               </form>
@@ -469,66 +572,116 @@ function UserProfile() {
                     )}
                   </ul>
                 </div>
-
+                <div>
+                  <h4 className="text-md font-medium mb-2">Recent Activity</h4>
+                  <div className="space-y-3">
+                    {/* <div className="p-2 bg-gray-100 rounded">
+                      <p className="text-sm">Logged in from new device</p>
+                      <p className="text-xs text-muted">Today, 10:45 AM</p>
+                    </div> */}
+                    <div className="p-2 bg-gray-100 rounded">
+                      <p className="text-sm">Profile information updated</p>
+                      <p className="text-xs text-muted">{formatDate(user?.updatedAt)}</p>
+                    </div>
+                    {/* <div className="p-2 bg-gray-100 rounded">
+                      <p className="text-sm">Password changed</p>
+                      <p className="text-xs text-muted">Apr 15, 2023</p>
+                    </div> */}
+                  </div>
+                </div>
                 {/* work here */}
-                {/* <div className="" style={{ display: 'flex', gap: '5px' }}>
+                <div className="" style={{ display: 'flex', gap: '5px' }}>
                   <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
-
-                   
                     {
-                      !userRequest?.some((req) => req.reqto === 'Change Password') ? (
-                        <button
-                          className="btn btn-outline"
-                          onClick={() => ReqToEditProfile('Change Password', 'pending')}
-                        >
-                          <span>Req. for Change Password</span>
-                        </button>
-                      ) : userRequest?.find((req) => req.reqto === 'Change Password')?.status === 'allow' ? (
+                      user?.designation?.includes('admin') ?
                         <button
                           className="btn btn-outline"
                           onClick={() => setShowPasswordForm(true)}
                         >
                           Change Password
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-outline"
-                          disabled
-                        >
-                          Change Password Req. Pending
-                        </button>
-                      )
+                        </button> :
+                        <>
+                          {
+                            !userRequest?.some((req) => req.reqto === 'Change Password') ? (
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => ReqToEditProfile('Change Password', 'pending')}
+                              >
+                                <span>Req. for Change Password</span>
+                              </button>
+                            ) : userRequest?.find((req) => req.reqto === 'Change Password')?.status === 'allow' ? (
+                              <button
+                                className="btn btn-outline"
+                                onClick={() => setShowPasswordForm(true)}
+                              >
+                                Change Password
+                              </button>
+                            ) : userRequest?.find((req) => req.reqto === 'Change Password')?.status === 'pending' ? (
+                              <button
+                                className="btn btn-outline"
+                                disabled
+                              >
+                                Change Password Req. Pending
+                              </button>
+                            ) :
+                              <button
+                                className="btn btn-outline"
+
+                              >
+                                Req. for Change Password
+                              </button>
+                          }
+                        </>
                     }
+
+
                   </div>
 
                   <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
-
                     {
-                      !userRequest?.some((req) => req.reqto === 'Edit Profile') ? (
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => ReqToEditProfile('Edit Profile', 'pending')}
-                        >
-                          Req. for Edit Profile
-                        </button>
-                      ) : userRequest?.find((req) => req.reqto === 'Edit Profile')?.status === 'allow' ? (
+                      user?.designation?.includes('admin') ?
                         <button
                           className="btn btn-primary"
                           onClick={() => setIsEditing(true)}
                         >
                           Edit Profile
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-outline"
-                          disabled
-                        >
-                          Edit Profile Req. Pending
-                        </button>
-                      )
+                        </button> :
+                        <>
+                          {
+                            !userRequest?.some((req) => req.reqto === 'Edit Profile') ? (
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => ReqToEditProfile('Edit Profile', 'pending')}
+                              >
+                                Req. for Edit Profile
+                              </button>
+                            ) : userRequest?.find((req) => req.reqto === 'Edit Profile')?.status === 'allow' ? (
+                              <button
+                                className="btn btn-primary"
+                                onClick={() => setIsEditing(true)}
+                              >
+                                Edit Profile
+                              </button>
+                            ) : userRequest?.find((req) => req.reqto === 'Edit Profile')?.status === 'pending' ? (
+                              <button
+                                className="btn btn-outline"
+                                disabled
+                              >
+                                Edit Profile Req. Pending
+                              </button>
+                            ) :
+                              (
+                                <button
+                                  className="btn btn-outline"
+                                >
+                                  Edit Profile Req. Pending
+                                </button>
+                              )
+                          }
+                        </>
                     }
                   </div>
-                </div> */}
+                </div>
 
               </div>
             </>

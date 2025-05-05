@@ -404,6 +404,7 @@ export const updateDepartment = async (req, res) => {
             userUpdated = true;
         }
         if (req.body?.teamleader && user?.teamleader !== req?.body?.teamleader) {
+            const prevdept = await Department.findOneAndUpdate({ teamleader: req.body.teamleader }, { teamleader: '' });
             const teamleader = await Department.findByIdAndUpdate(departmentId, { teamleader: req.body.teamleader });
             const tl = await TeamLeader.findOneAndUpdate({ username: user?.teamleader }, { department: '' })
             const us = await TeamLeader.findOneAndUpdate({ username: req.body.teamleader }, { department: user?.name });

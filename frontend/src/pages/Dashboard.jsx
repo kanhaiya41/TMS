@@ -174,6 +174,11 @@ function Dashboard() {
             to: '/dashboard/password-requests',
             icon: <FontAwesomeIcon icon={faLock} />,
             text: 'Password Requests',
+          },
+          {
+            to: '/dashboard/user-requests',
+            icon: <FontAwesomeIcon icon={faPersonCircleQuestion} />,
+            text: 'User Requests',
           }
         );
         break;
@@ -194,6 +199,11 @@ function Dashboard() {
             to: '/dashboard/password-requests',
             icon: <FontAwesomeIcon icon={faLock} />,
             text: 'Password Requests',
+          },
+          {
+            to: '/dashboard/user-requests',
+            icon: <FontAwesomeIcon icon={faPersonCircleQuestion} />,
+            text: 'User Requests',
           }
         );
         break;
@@ -245,11 +255,11 @@ function Dashboard() {
             icon: <FontAwesomeIcon icon={faTicketAlt} />,
             text: 'All Tickets',
           },
-          // {
-          //   to: '/dashboard/password-requests',
-          //   icon: <FontAwesomeIcon icon={faLock} />,
-          //   text: 'Password Requests',
-          // },
+          {
+            to: '/dashboard/password-requests',
+            icon: <FontAwesomeIcon icon={faLock} />,
+            text: 'Password Requests',
+          },
           {
             to: '/dashboard/overview',
             icon: <FontAwesomeIcon icon={faChartBar} />,
@@ -413,7 +423,9 @@ function Dashboard() {
             } />
             <Route path="/user-requests/*" element={
               user?.designation === 'admin' ? <AdminPanel user={user} view="user-requests" /> :
-                user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view="user-requests" /> : <NotFound />
+                user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view="user-requests" /> :
+                user?.designation === 'Manager' ? <ManagerPanel user={user} view="user-requests" /> :
+                <NotFound />
             } />
 
             {/* Super Admin Routes */}

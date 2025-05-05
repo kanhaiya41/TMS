@@ -248,7 +248,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
               name: '',
               password: '',
               cpassword: '',
-              mobile: '',
+              mobile: null,
               department: '',
               address: ''
             });
@@ -279,7 +279,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
               name: '',
               password: '',
               cpassword: '',
-              mobile: '',
+              mobile: null,
               branch: '',
               address: ''
             });
@@ -336,7 +336,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
             name: '',
             password: '',
             cpassword: '',
-            mobile: '',
+            mobile: null,
             department: '',
             address: ''
           });
@@ -482,7 +482,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
       </div>
 
       <div className="form-group">
-        <label htmlFor="" className="form-label">Profile Picture</label> <br /> <br />
+        <label htmlFor="" className="form-label">Profile Picture</label> 
         <label htmlFor="profile" className='form-label' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '2%', borderRadius: '12px' }}>{profile ? profile?.name : 'Upload a Profile Picture'}</label>
         <input
           type="file"

@@ -101,11 +101,10 @@ export const sendMail = async (req, res) => {
 
 export const updateForgetPassword = async (req, res) => {
     try {
-        const hashedPassword=await bcrypt.hash(req.body.password,10);
-        const admin = await Admin.findOneAndUpdate({email: req.body.email},{password:hashedPassword});
-        const superAdmin = await SuperAdmin.findOneAndUpdate({email: req.body.email},{password:hashedPassword});
-        if(admin || superAdmin)
-        {
+        const hashedPassword = await bcrypt.hash(req.body.password, 10);
+        const admin = await Admin.findOneAndUpdate({ email: req.body.email }, { password: hashedPassword });
+        const superAdmin = await SuperAdmin.findOneAndUpdate({ email: req.body.email }, { password: hashedPassword });
+        if (admin || superAdmin) {
             return res.status(200).json({
                 success: true,
                 message: 'Password Updated Succesfully!😊'
@@ -252,7 +251,7 @@ export const updateStatustoProfileUpdateRequest = async (req, res) => {
         }
         else {
             return res.status(400).json({
-                success: true,
+                success: false,
                 message: 'Status not changed!'
             });
         }
@@ -299,5 +298,80 @@ export const superAdminSignUp = async (req, res) => {
         })
     } catch (error) {
         console.log('while make super admin', error);
+    }
+}
+
+export const updateUserPassword = async (req, res) => {
+    try {
+        let user;
+        if (!user) {
+            user = await User.findById(req.body.id);
+        }
+        if (!user) {
+            user = await TeamLeader.findById(req.body.id);
+        }
+        if (!user) {
+            user = await Manager.findById(req.body.id);
+        }
+        if (!user) {
+            user = await Admin.findById(req.body.id);
+        }
+        if (!user) {
+            user = await SuperAdmin.findById(req.body.id);
+        }
+        if (!user) {
+            return res.status(400).json({
+                success: false,
+                message: 'User not found!'
+            })
+        }
+        else {
+            const isPasswordMatch = await bcrypt.compare(req.body.currentPassword,user?.password);
+            if (!isPasswordMatch) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Wrong Current Password!'
+                })
+            }
+            else {
+                const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
+                let updation = false;
+                if (user?.designation === 'Executive') {
+                    await User.findByIdAndUpdate(req.body.id, { password: hashedPassword });
+                    updation = true;
+                }
+                else if (user?.designation === 'Team Leader') {
+                    await TeamLeader.findByIdAndUpdate(req.body.id, { password: hashedPassword });
+                    updation = true;
+                }
+                else if (user?.designation === 'Manager') {
+                    await Manager.findByIdAndUpdate(req.body.id, { password: hashedPassword });
+                    updation = true;
+                }
+                else if (user?.designation === 'admin') {
+                    await Admin.findByIdAndUpdate(req.body.id, { password: hashedPassword });
+                    updation = true;
+                }
+                else if (user?.designation === 'superadmin') {
+                    await SuperAdmin.findByIdAndUpdate(req.body.id, { password: hashedPassword });
+                    updation = true;
+                }
+                if(updation)
+                {
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Your Password Successfully Updated!😊'
+                    })
+                }
+                else{
+                    return res.status(400).json({
+                        success: true,
+                        message: 'No Changes Found!'
+                    })
+                }
+            }
+        }
+    } catch (error) {
+        console.log('while updating user password', error);
     }
 }
