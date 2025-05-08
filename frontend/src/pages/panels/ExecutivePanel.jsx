@@ -25,7 +25,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setTickets(res?.data?.data?.filter((ticket) => ticket?.branch === user?.branch && ticket?.issuedby === user?.username));
+        setTickets(res?.data?.data?.filter((ticket) => ticket?.branch === user?.branch && (ticket?.issuedby === user?.username || ticket?.department.some((dept) => dept.name === user?.department))));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -69,6 +69,30 @@ function ExecutivePanel({ user, view = 'tickets' }) {
       day: 'numeric'
     });
   };
+
+  //update ticket status
+  const handleUpdateTicketStatus = async (ticketId, status) => {
+    try {
+      const res = await axios.post(`${URI}/executive/updateticketstatus`, { ticketId, status }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        fetchAllTickets();
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err?.response && err?.response?.data && err?.response?.data.message) {
+          toast.error(err?.response?.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+    } catch (error) {
+      console.log('error while ticket updation', error);
+    }
+  }
 
   return (
     <div className="animate-fade">
@@ -127,26 +151,29 @@ function ExecutivePanel({ user, view = 'tickets' }) {
           </div>
         </div>
       ) : (
-        <div className="card">
-          <div className="card-body p-0">
-            {filteredTickets?.length > 0 ? (
-              <div className="table-responsive">
-                <table className="table table-hover">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Name</th>
-                      <th>Subject</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTickets?.map((ticket, index) => (
-                      <tr key={ticket?.id}>
-                        <td>#{index + 1}</td>
-                        <td>{ticket?.name}</td>
+        <>
 
-                        {/* <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+          <div className="card">
+            <div className="card-body p-0">
+              {filteredTickets?.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+
+                        <th>Name</th>
+                        <th>Subject</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTickets?.map((ticket, index) => (
+                        ticket?.issuedby === user?.username &&
+                        <tr key={ticket?.id}>
+
+                          <td>{ticket?.name}</td>
+
+                          {/* <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
                             ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`}>
@@ -154,36 +181,120 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                               ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
                           </span> */}
 
-                        <td>
-                          {ticket?.subject}
-                          {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                          <td>
+                            {ticket?.subject}
+                            {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
                             ticket?.priority === 'medium' ? 'badge-warning' :
                               'badge-primary'
                             }`}>
                             {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
                           </span> */}
-                        </td>
-                        {/* <td>{formatDate(ticket?.createdAt)}</td> */}
-                        <td>
-                          <button
-                            className="btn btn-sm btn-outline"
-                            onClick={() => handleViewTicket(ticket)}
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-4 text-center">
-                <p className="text-muted">No tickets found. Create a new ticket to get started!</p>
-              </div>
-            )}
+                          </td>
+                          {/* <td>{formatDate(ticket?.createdAt)}</td> */}
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleViewTicket(ticket)}
+                            >
+                              View
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-4 text-center">
+                  <p className="text-muted">No tickets found. Create a new ticket to get started!</p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+
+          <div className="card">
+            <h2 className="text-xl font-bold">Tickets on Your Department</h2>
+            <div className="card-body p-0">
+              {filteredTickets?.length > 0 ? (
+                <div className="table-responsive">
+                  <table className="table table-hover">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Status</th>
+                        <th>Subject</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTickets?.map((ticket, index) => (
+                        <tr key={ticket?.id}>
+                          <td>#{index + 1}</td>
+                          <td>{ticket?.name}</td>
+
+                          <td>
+                            <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                              ticket?.status === 'in-progress' ? 'badge-primary' :
+                                'badge-success'
+                              }`}>
+                              {ticket?.status === 'in-progress' ? 'In Progress' :
+                                ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                            </span>
+                          </td>
+                          <td>
+                            {ticket?.subject}
+                            {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                            ticket?.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}>
+                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                          </span> */}
+                          </td>
+                          {/* <td>{formatDate(ticket?.createdAt)}</td> */}
+                          <td ><div className='flex gap-2'>
+                            {ticket.status !== 'resolved' && (
+                              <>
+                                {ticket.status === 'open' && (
+                                  <button
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                  >
+                                    Start
+                                  </button>
+                                )}
+                                {ticket.status === 'in-progress' && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                  >
+                                    Resolve
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleViewTicket(ticket)}
+                            >
+                              View
+                            </button>
+                          </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-4 text-center">
+                  <p className="text-muted">No tickets found. Create a new ticket to get started!</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </>
       )}
 
       {/* Ticket Detail Modal */}

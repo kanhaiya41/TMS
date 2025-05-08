@@ -64,7 +64,16 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res => {
+      }).then(async res => {
+
+        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch, section: 'department' },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+
         setFormData({
           name: '',
           description: '',
@@ -94,7 +103,14 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(res => {
+      }).then(async res => {
+        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch, section: 'department' },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
         fetchDepartment();
         setFormData({
           name: '',
@@ -149,30 +165,32 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
 
       </div>
 
-      <div className="form-group">
-        <label htmlFor="branch" className="form-label">Branch</label>
-        <select
-          id="branch"
-          name="branch"
-          className="form-select"
-          value={formData?.branch}
-          onChange={handleChange}
-        >
-          <option value="" disabled selected>Select a Branch</option>
-          {user?.branches?.map(branch => (
-            <>
-              {
-                <option key={branch} value={branch}>
-                  {branch}
-                </option>
-              }
-            </>
+      {
+        !initialData && <div className="form-group">
+          <label htmlFor="branch" className="form-label">Branch</label>
+          <select
+            id="branch"
+            name="branch"
+            className="form-select"
+            value={formData?.branch}
+            onChange={handleChange}
+          >
+            <option value="" disabled selected>Select a Branch</option>
+            {user?.branches?.map(branch => (
+              <>
+                {
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                }
+              </>
 
-          ))}
-        </select>
-        {errors.branch && <div className="text-error text-sm mt-1">{errors.branch}</div>}
+            ))}
+          </select>
+          {errors.branch && <div className="text-error text-sm mt-1">{errors.branch}</div>}
 
-      </div>
+        </div>
+      }
 
       <div className="form-group">
         <label htmlFor="teamleader" className="form-label">Department Team Leader</label>

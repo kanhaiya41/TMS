@@ -5,7 +5,8 @@ const userSlice = createSlice({
     name: 'user',
     initialState: {
         user: null,
-        theme: 'light'
+        theme: 'light',
+        notificationCount: 0
     },
     reducers: {
         setUser: (state, action) => {
@@ -13,9 +14,12 @@ const userSlice = createSlice({
         },
         setTheme: (state, action) => {
             state.theme = action.payload;
+        },
+        setNotificationCount: (state, action) => {
+            state.notificationCount = action.payload;
         }
     }
 });
 
-export const { setUser, setTheme } = userSlice.actions;
+export const { setUser, setTheme, setNotificationCount } = userSlice.actions;
 export default userSlice.reducer;

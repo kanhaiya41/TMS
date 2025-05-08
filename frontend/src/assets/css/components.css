@@ -41,23 +41,23 @@
 .btn-primary {
   background-color: var(--color-primary);
   color: var(--color-gray-100);
-  box-shadow: 0 0 20px rgba(0, 245, 255, 0.3);
+  /* box-shadow: 0 0 20px rgba(0, 245, 255, 0.3); */
 }
 
 .btn-primary:hover {
   background-color: var(--color-primary-dark);
-  box-shadow: 0 0 30px rgba(0, 245, 255, 0.4);
+  /* box-shadow: 0 0 30px rgba(0, 245, 255, 0.4); */
 }
 
 .btn-secondary {
   background-color: var(--color-secondary);
   color: white;
-  box-shadow: 0 0 20px rgba(255, 0, 228, 0.3);
+  /* box-shadow: 0 0 20px rgba(255, 0, 228, 0.3); */
 }
 
 .btn-secondary:hover {
   background-color: var(--color-secondary-dark);
-  box-shadow: 0 0 30px rgba(255, 0, 228, 0.4);
+  /* box-shadow: 0 0 30px rgba(255, 0, 228, 0.4); */
 }
 
 .btn-accent {
@@ -465,22 +465,18 @@
 }
 
 .table tbody tr {
-  transition: all var(--transition-fast);
-  
-
+  transition: all 0.3s ease; /* Example transition */
 }
 
 .table tbody tr:hover {
-  background: var(--glass-background);
-
-  backdrop-filter: var(--glass-backdrop);
+  background: gainsboro; /* Light transparent white */
+  backdrop-filter: blur(8px); /* Blur effect */
 }
+
 
 .table-sm th,
 .table-sm td {
   padding: var(--space-2);
-  
-
 }
 
 .table-bordered {

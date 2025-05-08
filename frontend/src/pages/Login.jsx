@@ -51,7 +51,15 @@ function Login() {
                   'Content-Type': 'application/json'
                 }
               })
-                .then(res => {
+                .then(async res => {
+                  const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: r?.data?.user?._id, branch: r?.data?.user?.branch, section: 'passreq', designation: r?.data?.user?.designation, department: r?.data?.user?.department },
+                    {
+                      headers: {
+                        'Content-Type': 'application/json'
+                      }
+                    }
+                  )
+
                   toast.success(res?.data?.message);
                   setEmail('');
                   setDesignation("");
@@ -60,7 +68,7 @@ function Login() {
                   if (err.response && err.response.data && err.response.data.message) {
                     toast.error(err.response.data.message); // For 400, 401, etc.
                   } else {
-                    toast.error("Something went wrong");
+                    toast.error("Something went wrong got up");
                   }
                 });
 

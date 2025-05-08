@@ -280,7 +280,6 @@ function AdminPanel({ view = 'departments' }) {
     setIsDeleteModalOpen(true);
   };
 
-
   //filters
   // Filter departments based on search term
   const filteredDepartments = departments?.filter(dept =>
@@ -573,13 +572,22 @@ function AdminPanel({ view = 'departments' }) {
     }
   };
 
-  const statusUpdateforUserRequest = async (requestId, status) => {
+  const statusUpdateforUserRequest = async (requestId, status,email) => {
     try {
       const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(r => {
+      }).then(async r => {
+
+        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: email, section: 'profile'},
+          {
+            headers:{
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+
         fetchEditProfileRequest();
         toast.success(r?.data?.message);
       }).catch(err => {
@@ -945,7 +953,6 @@ function AdminPanel({ view = 'departments' }) {
                     <thead>
                       <tr>
                         <th>Name</th>
-                        
                         <th>Department</th>
                         <th>Branch</th>
                         <th>Joined</th>
@@ -1311,7 +1318,7 @@ function AdminPanel({ view = 'departments' }) {
                                   <>
                                     <button
                                       className="btn btn-sm btn-success"
-                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow')}
+                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow',request?.email)}
                                     >Accept
                                     </button>
                                     <button

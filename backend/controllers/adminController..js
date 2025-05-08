@@ -2,6 +2,7 @@ import Admin from "../models/adminModel.js";
 import Branch from "../models/branchModel.js";
 import Department from "../models/departmentModel.js";
 import Manager from "../models/managerModel.js";
+import Notification from "../models/notificationModel.js";
 import UserRequests from "../models/reqModel.js";
 import TeamLeader from "../models/teamLeaderModel.js";
 import User from "../models/userModel.js";
@@ -117,10 +118,12 @@ export const updateUser = async (req, res) => {
             }
             if (req.body?.branch && user?.branch !== req?.body?.branch) {
                 const branch = await User.findByIdAndUpdate(userId, { branch: req.body.branch });
+                const notifyBranch = await Notification.findOneAndUpdate({ user: userId }, { branch: req.body.branch });
                 userUpdated = true;
             }
             if (req.body?.department && user?.department !== req?.body?.department) {
                 const department = await User.findByIdAndUpdate(userId, { department: req.body.department });
+                const notifyDepartment = await Notification.findOneAndUpdate({ user: userId }, { dept: req.body.department });
                 userUpdated = true;
             }
             if (req.body?.address && user?.address !== req?.body?.address) {
@@ -163,6 +166,7 @@ export const updateUser = async (req, res) => {
             }
             if (req.body?.branch && user?.branch !== req?.body?.branch) {
                 const branch = await Manager.findByIdAndUpdate(userId, { branch: req.body.branch });
+                const notifyBranch = await Notification.findOneAndUpdate({ user: userId }, { branch: req.body.branch });
                 userUpdated = true;
             }
             if (req.body?.address && user?.address !== req?.body?.address) {
@@ -206,10 +210,12 @@ export const updateUser = async (req, res) => {
             }
             if (req.body?.branch && user?.branch !== req?.body?.branch) {
                 const branch = await TeamLeader.findByIdAndUpdate(userId, { branch: req.body.branch });
+                const notifyBranch = await Notification.findOneAndUpdate({ user: userId }, { branch: req.body.branch });
                 userUpdated = true;
             }
             if (req.body?.department && user?.department !== req?.body?.department) {
                 const department = await TeamLeader.findByIdAndUpdate(userId, { department: req.body.department });
+                const notifyDepartment = await Notification.findOneAndUpdate({ user: userId }, { dept: req.body.department });
                 userUpdated = true;
             }
             if (req.body?.address && user?.address !== req?.body?.address) {
@@ -252,10 +258,7 @@ export const updateUser = async (req, res) => {
             }
             if (req.body?.branches && user?.branches !== req?.body?.branches) {
                 const branch = await Admin.findByIdAndUpdate(userId, { branches: req.body.branches });
-                userUpdated = true;
-            }
-            if (req.body?.department && user?.department !== req?.body?.department) {
-                const department = await Admin.findByIdAndUpdate(userId, { department: req.body.department });
+                const notifyBranches = await Notification.findOneAndUpdate({ user: userId }, { branches: req.body.branches });
                 userUpdated = true;
             }
             if (req.body?.address && user?.address !== req?.body?.address) {
@@ -272,9 +275,6 @@ export const updateUser = async (req, res) => {
                 userUpdated = true;
             }
         }
-
-
-
 
         if (userUpdated) {
             return res?.status(200).json({
@@ -408,6 +408,7 @@ export const updateDepartment = async (req, res) => {
             const teamleader = await Department.findByIdAndUpdate(departmentId, { teamleader: req.body.teamleader });
             const tl = await TeamLeader.findOneAndUpdate({ username: user?.teamleader }, { department: '' })
             const us = await TeamLeader.findOneAndUpdate({ username: req.body.teamleader }, { department: user?.name });
+            const notifyDepartment = await Notification.findOneAndUpdate({ user: us._id }, { dept: user?.name });
             userUpdated = true;
         }
 

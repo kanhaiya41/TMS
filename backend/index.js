@@ -7,6 +7,7 @@ import cors from 'cors'
 import { getProfilePic } from './middlewares/uploadToGFS.js';
 import adminApp from './routes/adminRoute.js';
 import executiveApp from './routes/executiveRoute.js'
+import notificationApp from './routes/notificationRoute.js';
 import path from 'path';
 
 dotenv.config();
@@ -28,17 +29,18 @@ app.use('/admin', adminApp);
 
 app.use('/executive', executiveApp);
 
+app.use('/notification', notificationApp);
 
 app.get('/file/:filename', getProfilePic);
 
 
 
-const __dirname=path.resolve();
+const __dirname = path.resolve();
 
-app.use(express.static(path.join(__dirname,'/frontend/build')));
+app.use(express.static(path.join(__dirname, '/frontend/build')));
 
-app.get('*',(req,res)=>{
-    res.sendFile(path.resolve(__dirname,"frontend","build","index.html"));
+app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, "frontend", "build", "index.html"));
 });
 
 

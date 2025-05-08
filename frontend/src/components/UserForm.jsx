@@ -143,7 +143,6 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
 
   };
 
-
   const passValidation = () => {
     if (!formData?.username || !formData?.email || !formData?.password || !formData?.cpassword || !formData?.mobile || !formData?.address) {
       toast.error('Please fill out all Fields!')
@@ -240,7 +239,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
             headers: {
               'Content-Type': 'multipart/form-data'
             }
-          }).then(res => {
+          }).then(async (res) => {
             fetchAllUsers();
             setFormData({
               username: '',
@@ -271,7 +270,16 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
             headers: {
               'Content-Type': 'multipart/form-data'
             }
-          }).then(res => {
+          }).then(async res => {
+            if (designation === 'Executive' || designation === 'Team Leader') {
+              const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch || user?.branch, section: 'users', designation: designation, department: formData?.department },
+                {
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                }
+              )
+            }
             // fetchAllUsers();
             setFormData({
               username: '',
@@ -328,7 +336,16 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
           headers: {
             'Content-Type': 'multipart/form-data'
           }
-        }).then(res => {
+        }).then(async res => {
+          if (designation === 'Executive' || designation === 'Team Leader') {
+            const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch || user?.branch, section: 'users', designation: designation, department: formData?.department },
+              {
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              }
+            )
+          }
           // fetchAllUsers();
           setFormData({
             username: '',
@@ -482,7 +499,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
       </div>
 
       <div className="form-group">
-        <label htmlFor="" className="form-label">Profile Picture</label> 
+        <label htmlFor="" className="form-label">Profile Picture</label>
         <label htmlFor="profile" className='form-label' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '2%', borderRadius: '12px' }}>{profile ? profile?.name : 'Upload a Profile Picture'}</label>
         <input
           type="file"
@@ -534,7 +551,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
                 {
                   departments?.map((curElem) => (
                     curElem?.branch === formData?.branch &&
-                      (designation === 'Executive' || !curElem?.teamleader) ? (
+                      (designation === 'Executive' || (initialData || !curElem?.teamleader)) ? (
                       <option key={curElem?.name} value={curElem?.name}>
                         {curElem?.name}
                       </option>

@@ -153,7 +153,14 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
           status: 'open'
         };
 
-        const res = await axios.post(`${URI}/executive/raiseticket`, payload).then(r => {
+        const res = await axios.post(`${URI}/executive/raiseticket`, payload).then(async r => {
+          const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: user?.branch, section: 'tickets',department: formDepartment},
+            {
+              headers:{
+                'Content-Type': 'application/json'
+              }
+            }
+          )
           toast.success(r?.data?.message);
           // Reset form
           setFormData({

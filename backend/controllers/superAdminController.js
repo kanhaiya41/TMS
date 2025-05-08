@@ -3,6 +3,7 @@ import User from '../models/userModel.js';
 import UserRequests from '../models/reqModel.js';
 import Branch from '../models/branchModel.js';
 import Admin from '../models/adminModel.js';
+import Notification from '../models/notificationModel.js';
 
 export const makeAdmin = async (req, res) => {
     try {
@@ -166,7 +167,31 @@ export const updateBranch = async (req, res) => {
             branchUpdated = true;
         }
         if (req.body?.admin && branch?.admin !== req?.body?.admin) {
-            const admin = await Branch.findByIdAndUpdate(branchId, { admin: req.body.admin });
+
+            const adminBranch = await Branch.findByIdAndUpdate(
+                branchId,
+                { admin: req.body.admin },
+                { new: true } // So you get the updated document
+            );
+
+
+            if (!adminBranch) {
+                return res.status(404).json({ message: "Branch not found" });
+            }
+
+            const prevAdmin = await Admin.findOneAndUpdate(
+                { branches: adminBranch.name },
+                { $pull: { branches: adminBranch.name } }
+            );
+
+            const updateAdmin = await Admin.findOneAndUpdate(
+                { username: req.body.admin },
+                { $addToSet: { branches: adminBranch.name } } // Use $addToSet to avoid duplicates
+            );
+
+            const updateNotify = await Notification.findOneAndUpdate({ user: prevAdmin._id }, { $pull: { branches: adminBranch.name } });
+            const updatenewNotify = await Notification.findOneAndUpdate({ user: updateAdminAdmin._id }, { $push: { branches: adminBranch.name } });
+
             branchUpdated = true;
         }
 

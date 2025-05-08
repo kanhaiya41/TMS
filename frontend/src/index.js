@@ -15,14 +15,15 @@ import { Toaster } from 'react-hot-toast';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 const persister = persistStore(store);
 root.render(
-  <React.StrictMode>
-    <Toaster />
+  // <React.StrictMode>
+    
     <Provider store={store}>
+    <Toaster />
       <PersistGate loading={null} persistor={persister}>
         <App />
       </PersistGate>
     </Provider>
-  </React.StrictMode>
+  // {/* </React.StrictMode> */}/
 );
 
 // If you want to start measuring performance in your app, pass a function

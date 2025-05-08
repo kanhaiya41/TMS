@@ -279,7 +279,16 @@ function UserProfile() {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(r => {
+      }).then(async r => {
+
+        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: user?.branch, section: 'userreq', department: user?.department,designation:user?.designation },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+
         fetchEditProfileRequest();
         toast.success(r?.data?.message);
       }).catch(err => {
@@ -361,6 +370,19 @@ function UserProfile() {
                   <p className="text-sm text-muted">Mobile Number</p>
                   <p className="font-medium">{user?.mobile}</p>
                 </div>
+                {user?.branches && (
+                  <div>
+                    <p className="font-medium">Your Branches</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-evenly', marginLeft: '20%', width: '100%' }}>
+                      {
+                        user?.branches?.map((curElem, index) => (
+                          <p className="text-sm text-muted">{index + 1}. {curElem}</p>
+                        ))
+                      }
+                    </div>
+
+                  </div>
+                )}
               </div>
             </div>
           </div>

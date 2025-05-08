@@ -345,13 +345,22 @@ function TeamLeaderPanel({ view = 'executives' }) {
     }
   }
 
-  const statusUpdateforUserRequest = async (requestId, status) => {
+  const statusUpdateforUserRequest = async (requestId, status, email) => {
     try {
       const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
         headers: {
           'Content-Type': 'application/json'
         }
-      }).then(r => {
+      }).then(async r => {
+
+        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: email, section: 'profile' },
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        )
+
         fetchEditProfileRequest();
         toast.success(r?.data?.message);
       }).catch(err => {
@@ -813,7 +822,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
     <>
       <div className="mb-4">
         <h2 className="text-xl font-bold">User Requests</h2>
-        <p className="text-muted">Manage requests from team leaders and managers</p>
+        <p className="text-muted">Manage requests from executives</p>
       </div>
 
       <div className="card mb-4">
@@ -873,7 +882,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                                   <>
                                     <button
                                       className="btn btn-sm btn-success"
-                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow')}
+                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
                                     >Accept
                                     </button>
                                     <button

@@ -15,7 +15,7 @@ import NotFound from './NotFound';
 import '../assets/css/components.css';
 import '../assets/css/dashboard.css';
 import { useDispatch, useSelector } from 'react-redux';
-import { setTheme, setUser } from '../Redux/userSlice';
+import { setNotificationCount, setTheme, setUser } from '../Redux/userSlice';
 import axios from 'axios';
 import URI from '../utills';
 import toast from 'react-hot-toast';
@@ -24,12 +24,60 @@ function Dashboard() {
 
   const dispatch = useDispatch()
 
-  const { user, theme } = useSelector(store => store.user);
+  const { user, theme, notificationCount } = useSelector(store => store.user);
 
   const [sidebarExpanded, setSidebarExpanded] = useState(window.innerWidth >= 1024);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [pageTitle, setPageTitle] = useState('Dashboard');
-  const [notificationCount, setNotificationCount] = useState(3);
+  // const [notificationCount, setNotificationCount] = useState(0);
+
+  const fetchNotification = async () => {
+    try {
+      let payload = {
+        userId: user?._id,
+        designation: user?.designation
+      };
+
+      if (user?.designation === 'admin') {
+        payload.branches = user?.branches;
+      }
+
+      if (user?.designation !== 'superadmin') {
+        payload.branch = user?.branch;
+      }
+
+      if (user?.designation === 'Team Leader' || user?.designation === 'Executive') {
+        payload.department = user?.department;
+      }
+
+      console.log(payload);
+      console.log(user);
+      // else if(user?.designation)
+
+      const res = await axios.post(`${URI}/notification/getnotification`, payload, {
+        headers: {
+          'Content-Type': ' application/json'
+        }
+      }).then((r) => {
+        const obj = r?.data?.userObject;
+        const updatedNotificaton =
+          (obj?.department || 0) +
+          (obj?.users || 0) +
+          (obj?.tickets || 0) +
+          (obj?.passreq || 0) +
+          (obj?.userreq || 0) +
+          (obj?.profile || 0);
+        dispatch(setNotificationCount(updatedNotificaton));
+      })
+    } catch (error) {
+      console.log('while fetching notificaton', error);
+      toast.error('Error!');
+    }
+  }
+
+  useEffect(() => {
+    fetchNotification();
+  }, [notificationCount]);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -75,7 +123,7 @@ function Dashboard() {
           navigate('/dashboard/overview');
       }
     }
-  }, [user.role, navigate, location.pathname]);
+  }, [user.designation, navigate, location.pathname]);
 
   const getPageTitle = (path) => {
     switch (path) {
@@ -131,6 +179,73 @@ function Dashboard() {
     }
 
   };
+
+  const resolveNotification = async (text) => {
+    try {
+      const payload = {
+        user: user?._id
+      }
+      if (text === 'Profile') {
+        payload.section = 'profile';
+      }
+      else if (text === 'My Tickets') {
+        payload.section = 'tickets';
+      }
+      else if (text === 'Tickets') {
+        payload.section = 'tickets';
+      }
+      else if (text === 'All Tickets') {
+        payload.section = 'tickets';
+      }
+      else if (text === 'Department') {
+        payload.section = 'department';
+      }
+      else if (text === 'Departments') {
+        payload.section = 'department';
+      }
+      else if (text === 'Executives') {
+        payload.section = 'users';
+      }
+      else if (text === 'Admins') {
+        payload.section = 'users';
+      }
+      else if (text === 'Team Leaders & Managers') {
+        payload.section = 'users';
+      }
+      else if (text === 'Password Requests') {
+        payload.section = 'passreq';
+      }
+      else if (text === 'User Requests') {
+        payload.section = 'userreq';
+      }
+
+      const res = await axios.post(`${URI}/notification/resolvenotification`, payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        const obj = res?.data?.notificationObject;
+        const updatedNotificaton =
+          (obj?.department || 0) +
+          (obj?.users || 0) +
+          (obj?.tickets || 0) +
+          (obj?.passreq || 0) +
+          (obj?.userreq || 0) +
+          (obj?.profile || 0);
+        dispatch(setNotificationCount(updatedNotificaton));
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+    } catch (error) {
+      console.log('While resolve notification', error);
+    }
+  }
 
   // Only show relevant navigation items based on user designation
   const getNavItems = () => {
@@ -298,7 +413,7 @@ function Dashboard() {
         <div className="sidebar-content">
           <nav className="nav-menu">
             {getNavItems()?.map((item) => (
-              <li className="nav-item" key={item?.to}>
+              <li className="nav-item" key={item?.to} onClick={() => resolveNotification(item?.text)}>
                 <NavLink
                   to={item?.to}
                   className={({ isActive }) =>
@@ -339,7 +454,9 @@ function Dashboard() {
           </div>
 
           <div className="top-nav-right">
-            <button
+            {
+              notificationCount > 0 &&
+              <button
               className="notification-btn"
               aria-label="Notifications"
             >
@@ -348,6 +465,7 @@ function Dashboard() {
                 <span className="notification-badge">{notificationCount}</span>
               )}
             </button>
+            }
             {/* modes day and night  */}
             <button
               className="theme-toggle-btn"
@@ -371,7 +489,7 @@ function Dashboard() {
                     <FontAwesomeIcon icon={faUser} />
                     Profile
                   </a>
-                 
+
                   <div className="dropdown-divider"></div>
                   <button onClick={handleLogout} className="dropdown-item text-error">
                     <i className="fa-regular fa-sign-out"></i>
@@ -424,8 +542,8 @@ function Dashboard() {
             <Route path="/user-requests/*" element={
               user?.designation === 'admin' ? <AdminPanel user={user} view="user-requests" /> :
                 user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view="user-requests" /> :
-                user?.designation === 'Manager' ? <ManagerPanel user={user} view="user-requests" /> :
-                <NotFound />
+                  user?.designation === 'Manager' ? <ManagerPanel user={user} view="user-requests" /> :
+                    <NotFound />
             } />
 
             {/* Super Admin Routes */}

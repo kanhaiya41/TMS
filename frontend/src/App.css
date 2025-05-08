@@ -83,7 +83,7 @@
 }
 
 :root[data-theme="dark"] {
-  --color-primary: #1e90ff;
+  --color-primary: #1e90ff; /* ye btn or sidebar bg
   /* Dodger Blue */
   --color-primary-light: #3ea6ff;
   /* Lighter blue */
@@ -106,20 +106,20 @@
   --color-error: #ef4444;
   /* Red */
 
-  --color-gray-100: #1f1f1f;
-  --color-gray-200: #2a2a2a;
-  --color-gray-300: #333333;
-  --color-gray-400: #444444;
+  --color-gray-100: #1f1f1f; /*dashboar bg */
+  --color-gray-200: #a29e9e; /*Outlines */
+  --color-gray-300: #333333; /*sidebar designation */
+  --color-gray-400: #444444; /*sidebar items */
   --color-gray-500: #555555;
   --color-gray-600: #666666;
   --color-gray-700: #777777;
-  --color-gray-800: #888888;
-  --color-gray-900: #999999;
+  --color-gray-800: #888888; /*sidebar outlines */
+  --color-gray-900: #999999; /*sidebar bg */
 
-  --color-background: #121212;
+  --color-background: #a29e9e; /*top nav bg */
   /* Dark Background */
-  --color-text: ;
+  --color-text: rgb(101, 101, 202) ;
   /* Soft White */
-  --color-text-secondary: #a1a1aa;
+  --color-text-secondary: #aaa1a1;
   /* Muted Gray */
 }
