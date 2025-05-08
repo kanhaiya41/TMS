@@ -17,7 +17,7 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
   });
 
   const [errors, setErrors] = useState({});
-
+  const [loading, setLoading] = useState(false);
 
 
   const handleChange = (e) => {
@@ -57,46 +57,55 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (validateForm()) {
-      // Convert managerId to number if it's not empty
-      const res = await axios.post(`${URI}/admin/createdepartment`, formData, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(async res => {
-
-        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch, section: 'department' },
-          {
-            headers: {
-              'Content-Type': 'application/json'
-            }
+    try {
+      setLoading(true);
+      if (validateForm()) {
+        // Convert managerId to number if it's not empty
+        const res = await axios.post(`${URI}/admin/createdepartment`, formData, {
+          headers: {
+            'Content-Type': 'application/json'
           }
-        )
+        }).then(async res => {
 
-        setFormData({
-          name: '',
-          description: '',
-          manager: '',
-          teamleader: '',
-          branch: ''
-        })
-        fetchDepartment();
-        toast.success(res?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
+          const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch, section: 'department' },
+            {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            }
+          )
 
+          setFormData({
+            name: '',
+            description: '',
+            manager: '',
+            teamleader: '',
+            branch: ''
+          })
+          fetchDepartment();
+          onCancel();
+          toast.success(res?.data?.message);
+        }).catch(err => {
+          // Handle error and show toast
+          if (err.response && err.response.data && err.response.data.message) {
+            toast.error(err.response.data.message); // For 400, 401, etc.
+          } else {
+            toast.error("Something went wrong");
+          }
+        });
+
+      }
+    } catch (error) {
+      console.log('while create dept', error);
+    }
+    finally {
+      setLoading(false);
     }
   };
 
   const updateUser = async (e) => {
     try {
+      setLoading(true);
       e.preventDefault();
 
       const res = await axios.post(`${URI}/admin/updatedepartment`, { name: formData?.name, description: formData?.description, manager: formData?.manager, teamleader: formData?.teamleader, branch: formData?.branch, departmentid: initialData?._id }, {
@@ -112,6 +121,7 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
           }
         )
         fetchDepartment();
+        onCancel();
         setFormData({
           name: '',
           description: '',
@@ -131,6 +141,9 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
 
     } catch (error) {
       console.log("while updating Branch");
+    }
+    finally {
+      setLoading(false);
     }
   }
 
@@ -223,13 +236,19 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          onClick={initialData ? updateUser : handleSubmit}
-        >
-          {initialData ? 'Update Department' : 'Create Department'}
-        </button>
+        {
+          loading ? <button>
+            <img src="/img/loader.png" className='Loader' alt="loader" />
+          </button>
+            :
+            <button
+              type="submit"
+              className="btn btn-primary"
+              onClick={initialData ? updateUser : handleSubmit}
+            >
+              {initialData ? 'Update Department' : 'Create Department'}
+            </button>
+        }
       </div>
     </form>
   );

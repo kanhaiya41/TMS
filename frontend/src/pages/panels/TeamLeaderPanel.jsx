@@ -606,6 +606,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
             <TicketForm
               // onSubmit={handleCreateTicket}
               onCancel={() => setShowTicketForm(false)}
+              fetchAllTickets={fetchAllTickets}
             />
           </div>
         </div>

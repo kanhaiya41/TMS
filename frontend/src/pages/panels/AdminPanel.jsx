@@ -206,7 +206,7 @@ function AdminPanel({ view = 'departments' }) {
           'Content-Type': 'application/json'
         }
       }).then(r => {
-        setUserRequest(r?.data?.requests?.filter((req)=>user?.branches?.includes(req.branch)));
+        setUserRequest(r?.data?.requests?.filter((req) => user?.branches?.includes(req.branch)));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -572,7 +572,7 @@ function AdminPanel({ view = 'departments' }) {
     }
   };
 
-  const statusUpdateforUserRequest = async (requestId, status,email) => {
+  const statusUpdateforUserRequest = async (requestId, status, email) => {
     try {
       const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
         headers: {
@@ -580,9 +580,9 @@ function AdminPanel({ view = 'departments' }) {
         }
       }).then(async r => {
 
-        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: email, section: 'profile'},
+        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: email, section: 'profile' },
           {
-            headers:{
+            headers: {
               'Content-Type': 'application/json'
             }
           }
@@ -788,7 +788,7 @@ function AdminPanel({ view = 'departments' }) {
             <UserForm
               initialData={selectedUser}
               designation={userRole}
-              fetchAllUsers={fetchAllUsers}
+              fetchAllUsers={userRole === 'Executive' ? fetchAllUsers : userRole === 'Manager' ? fetchAllManagers : fetchAllTeamLeaders}
               onCancel={() => {
                 setselectedUser(null);
                 setUserRole('');
@@ -843,8 +843,8 @@ function AdminPanel({ view = 'departments' }) {
                                   <span>{tl?.username}</span>
                                 </div>
                               </td>
-                              
-                              <td>{tl?.department ? tl?.department: 'Not Assigned'}</td>
+
+                              <td>{tl?.department ? tl?.department : 'Not Assigned'}</td>
                               <td>{tl?.branch}</td>
                               <td>{formatDate(tl?.createdAt)}</td>
                               <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -972,7 +972,7 @@ function AdminPanel({ view = 'departments' }) {
                                   <span>{m?.username}</span>
                                 </div>
                               </td>
-                              
+
                               <td>{m?.department}</td>
                               <td>{m?.branch}</td>
                               <td>{formatDate(m.createdAt)}</td>
@@ -1310,7 +1310,7 @@ function AdminPanel({ view = 'departments' }) {
                           </td>
                           <td>{request?.department}</td>
                           <td>{request?.reqto}</td>
-                          <td style={{display:'flex',justifyContent:'center'}}>
+                          <td style={{ display: 'flex', justifyContent: 'center' }}>
                             {/* {request?.status === 'pending' ? ( */}
                             <div className="flex gap-2">
                               {
@@ -1318,7 +1318,7 @@ function AdminPanel({ view = 'departments' }) {
                                   <>
                                     <button
                                       className="btn btn-sm btn-success"
-                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow',request?.email)}
+                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
                                     >Accept
                                     </button>
                                     <button

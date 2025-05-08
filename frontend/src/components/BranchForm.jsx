@@ -12,6 +12,7 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
 
   const [errors, setErrors] = useState({});
   const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   //fetch users
   const fetchAllUsers = async () => {
@@ -74,6 +75,7 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
     e.preventDefault();
 
     try {
+      setLoading(true);
       if (validateForm()) {
 
         const res = await axios.post(`${URI}/superadmin/createbranch`, formData, {
@@ -82,6 +84,7 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
           }
         }).then(res => {
           fetchBranches();
+          onCancel();
           setFormData({
             name: '',
             location: '',
@@ -101,11 +104,15 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
     } catch (error) {
       console.log("while creating branch", error);
     }
+    finally {
+      setLoading(false);
+    }
   };
 
 
   const updateUser = async (e) => {
     try {
+      setLoading(true);
       e.preventDefault();
 
       const res = await axios.post(`${URI}/superadmin/updatebranch`, { name: formData?.name, location: formData?.location, admin: formData?.admin, branchid: initialData?._id }, {
@@ -114,6 +121,7 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
         }
       }).then(res => {
         fetchBranches();
+        onCancel();
         setFormData({
           name: '',
           location: '',
@@ -132,6 +140,9 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
 
     } catch (error) {
       console.log("while updating Branch");
+    }
+    finally {
+      setLoading(false);
     }
   }
 
@@ -182,7 +193,7 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
           <option value="" selected disabled>Select an admin (optional)</option>
           {availableAdmins?.map(admin => (
             <option key={admin?.id} value={admin?.username}>
-              {admin?.username} - {admin?.branches?.map(b=>(<>{b}, </>))}
+              {admin?.username} - {admin?.branches?.map(b => (<>{b}, </>))}
             </option>
           ))}
         </select>
@@ -196,13 +207,19 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          onClick={initialData ? updateUser : handleSubmit}
-          className="btn btn-primary"
-        >
-          {initialData ? 'Update Branch' : 'Create Branch'}
-        </button>
+        {
+          loading ? <button>
+            <img src="/img/loader.png" className='Loader' alt="loader" />
+          </button>
+            :
+            <button
+              type="submit"
+              onClick={initialData ? updateUser : handleSubmit}
+              className="btn btn-primary"
+            >
+              {initialData ? 'Update Branch' : 'Create Branch'}
+            </button>
+        }
       </div>
     </form>
   );

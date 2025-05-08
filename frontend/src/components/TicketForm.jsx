@@ -19,6 +19,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
   });
 
   const [formDepartment, setFormDepartment] = useState(initialData?.department || [])
+  const [loading, setLoading] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [selectedDepartment, setSelectedDepartment] = useState([]);
@@ -144,6 +145,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
       if (validateForm()) {
         const payload = {
           ...formData,
@@ -154,13 +156,15 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
         };
 
         const res = await axios.post(`${URI}/executive/raiseticket`, payload).then(async r => {
-          const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: user?.branch, section: 'tickets',department: formDepartment},
+          const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: user?.branch, section: 'tickets', department: formDepartment },
             {
-              headers:{
+              headers: {
                 'Content-Type': 'application/json'
               }
             }
           )
+          fetchAllTickets();
+          onCancel();
           toast.success(r?.data?.message);
           // Reset form
           setFormData({
@@ -189,6 +193,9 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
     } catch (error) {
       console.log('while raising ticket', error);
       toast.error(error?.response?.data?.message || 'Something went wrong');
+    }
+    finally {
+      setLoading(false);
     }
   };
 
@@ -332,12 +339,18 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary"
-        >
-          {initialData ? 'Update Ticket' : 'Create Ticket'}
-        </button>
+        {
+          loading ? <button>
+            <img src="/img/loader.png" className='Loader' alt="loader" />
+          </button>
+            :
+            <button
+              type="submit"
+              className="btn btn-primary"
+            >
+              {initialData ? 'Update Ticket' : 'Create Ticket'}
+            </button>
+        }
       </div>
     </form>
   );

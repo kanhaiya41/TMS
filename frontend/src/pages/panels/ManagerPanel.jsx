@@ -578,6 +578,7 @@ function ManagerPanel({ user, view = 'branch' }) {
           <div className="card-body">
             <UserForm
               initialData={selectedUser}
+              fetchAllUsers={userRole === 'Executive' ? fetchAllUsers : fetchAllTeamLeaders}
               designation={userRole}
               onCancel={() => {
                 setSelectedUser(null);
@@ -802,6 +803,7 @@ function ManagerPanel({ user, view = 'branch' }) {
             <TicketForm
               onSubmit={handleCreateTicket}
               onCancel={() => setShowTicketForm(false)}
+              fetchAllTickets={fetchAllTickets}
             />
           </div>
         </div>

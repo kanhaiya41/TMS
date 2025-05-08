@@ -167,7 +167,7 @@ export const login = async (req, res) => {
         );
         return res.cookie('token', token, { httpOnly: true, sameSite: 'strict', maxAge: 10 * 60 * 60 * 1000 }).json({
             success: true,
-            message: `Welcome ${user?.username}`,
+            message: `Welcome ${user?.name}`,
             user
         });
 
@@ -326,7 +326,7 @@ export const updateUserPassword = async (req, res) => {
             })
         }
         else {
-            const isPasswordMatch = await bcrypt.compare(req.body.currentPassword,user?.password);
+            const isPasswordMatch = await bcrypt.compare(req.body.currentPassword, user?.password);
             if (!isPasswordMatch) {
                 return res.status(400).json({
                     success: false,
@@ -356,14 +356,13 @@ export const updateUserPassword = async (req, res) => {
                     await SuperAdmin.findByIdAndUpdate(req.body.id, { password: hashedPassword });
                     updation = true;
                 }
-                if(updation)
-                {
+                if (updation) {
                     return res.status(200).json({
                         success: true,
                         message: 'Your Password Successfully Updated!😊'
                     })
                 }
-                else{
+                else {
                     return res.status(400).json({
                         success: true,
                         message: 'No Changes Found!'

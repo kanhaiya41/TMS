@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 function Signup({ verifySuperAdmin }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
 
     const [profile, setProfile] = useState(null);
 
@@ -69,6 +70,7 @@ function Signup({ verifySuperAdmin }) {
     const makeUser = async (e) => {
         e.preventDefault();
         try {
+            setLoading(true);
             let validation = passValidation();
             if (validation) {
                 const formdata = new FormData();
@@ -112,6 +114,9 @@ function Signup({ verifySuperAdmin }) {
             }
         } catch (error) {
             console.log("while make an admin", error);
+        }
+        finally {
+            setLoading(false);
         }
     }
 
@@ -237,16 +242,19 @@ function Signup({ verifySuperAdmin }) {
                         />
                         {/* {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>} */}
                     </div>
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary btn-block"
-                        style={{ width: '200%' }}
-                    // disabled={loading}
-                    >
-                        {/* {loading ? 'Signing in...' : 'Sign In'} */}
-                        Sign Up
-                    </button>
+                    {
+                        loading ? <button>
+                            <img src="/img/loader.png" className='Loader' alt="loader" />
+                        </button>
+                            :
+                            <button
+                                type="submit"
+                                className="btn btn-primary btn-block"
+                                style={{ width: '200%' }}
+                            >
+                                Sign Up
+                            </button>
+                    }
                 </form>
 
 

@@ -19,6 +19,8 @@ function Login() {
   const [sendedCode, setSendedCode] = useState('');
   const [cpassword, setCPassword] = useState('');
 
+  const [loading, setLoading] = useState(false);
+
   const GenerateRandomOTP = (lenth) => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const characterlenth = characters.length;
@@ -161,6 +163,7 @@ function Login() {
   const login = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
       const res = await axios.post(`${URI}/auth/login`, { email: email, password: password, designation: designation }, {
         headers: {
           'Content-Type': 'application/json'
@@ -178,6 +181,9 @@ function Login() {
       });
     } catch (error) {
       console.log("while login", error);
+    }
+    finally {
+      setLoading(false);
     }
   }
 
@@ -298,15 +304,18 @@ function Login() {
                     <option value="Executive">Executive</option>
                   </select>
                 </div>
-
-                <button
-                  type="submit"
-                  className="btn btn-primary btn-block"
-                // disabled={loading}
-                >
-                  {/* {loading ? 'Signing in...' : 'Sign In'} */}
-                  Sign In
-                </button>
+                {
+                  loading ? <button>
+                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                  </button>
+                    :
+                    <button
+                      type="submit"
+                      className="btn btn-primary btn-block"
+                    >
+                      Sign In
+                    </button>
+                }
                 <label className="form-check-label" style={{ color: 'blue' }} htmlFor="remember" onClick={forgetPassword}>
                   forget password
                 </label>

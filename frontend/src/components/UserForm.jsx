@@ -22,6 +22,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
   });
 
   const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [managers, setManagers] = useState([]);
@@ -215,6 +216,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
   const makeUser = async (e) => {
     e.preventDefault();
     try {
+      setLoading(true);
       let validation = passValidation();
       if (validation) {
         const formdata = new FormData();
@@ -241,6 +243,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
             }
           }).then(async (res) => {
             fetchAllUsers();
+            onCancel();
             setFormData({
               username: '',
               email: '',
@@ -280,7 +283,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
                 }
               )
             }
-            // fetchAllUsers();
+            fetchAllUsers();
             setFormData({
               username: '',
               email: '',
@@ -307,10 +310,14 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
     } catch (error) {
       console.log("while make an admin", error);
     }
+    finally {
+      setLoading(false);
+    }
   }
 
   const updateUser = async (e) => {
     try {
+      setLoading(true);
       e.preventDefault();
 
       let validation = updationValidation();
@@ -346,7 +353,9 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
               }
             )
           }
-          // fetchAllUsers();
+          
+          fetchAllUsers();
+          onCancel();
           setFormData({
             username: '',
             email: '',
@@ -374,6 +383,9 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
       }
     } catch (error) {
       console.log("while updating user");
+    }
+    finally {
+      setLoading(false);
     }
   }
 
@@ -574,13 +586,19 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          onClick={initialData ? updateUser : makeUser}
-        >
-          {initialData ? 'Update Now' : 'Create Now'}
-        </button>
+        {
+          loading ? <button>
+            <img src="/img/loader.png" className='Loader' alt="loader" />
+          </button>
+            :
+            <button
+              type="submit"
+              className="btn btn-primary"
+              onClick={initialData ? updateUser : makeUser}
+            >
+              {initialData ? 'Update Now' : 'Create Now'}
+            </button>
+        }
       </div>
     </form>
   );

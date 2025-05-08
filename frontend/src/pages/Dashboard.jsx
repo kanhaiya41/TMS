@@ -185,62 +185,68 @@ function Dashboard() {
       const payload = {
         user: user?._id
       }
-      if (text === 'Profile') {
-        payload.section = 'profile';
+      if (text === 'Branches' || text === 'System Overview') {
+        return '';
       }
-      else if (text === 'My Tickets') {
-        payload.section = 'tickets';
-      }
-      else if (text === 'Tickets') {
-        payload.section = 'tickets';
-      }
-      else if (text === 'All Tickets') {
-        payload.section = 'tickets';
-      }
-      else if (text === 'Department') {
-        payload.section = 'department';
-      }
-      else if (text === 'Departments') {
-        payload.section = 'department';
-      }
-      else if (text === 'Executives') {
-        payload.section = 'users';
-      }
-      else if (text === 'Admins') {
-        payload.section = 'users';
-      }
-      else if (text === 'Team Leaders & Managers') {
-        payload.section = 'users';
-      }
-      else if (text === 'Password Requests') {
-        payload.section = 'passreq';
-      }
-      else if (text === 'User Requests') {
-        payload.section = 'userreq';
+      else {
+        if (text === 'Profile') {
+          payload.section = 'profile';
+        }
+        else if (text === 'My Tickets') {
+          payload.section = 'tickets';
+        }
+        else if (text === 'Tickets') {
+          payload.section = 'tickets';
+        }
+        else if (text === 'All Tickets') {
+          payload.section = 'tickets';
+        }
+        else if (text === 'Department') {
+          payload.section = 'department';
+        }
+        else if (text === 'Departments') {
+          payload.section = 'department';
+        }
+        else if (text === 'Executives') {
+          payload.section = 'users';
+        }
+        else if (text === 'Admins') {
+          payload.section = 'users';
+        }
+        else if (text === 'Team Leaders & Managers') {
+          payload.section = 'users';
+        }
+        else if (text === 'Password Requests') {
+          payload.section = 'passreq';
+        }
+        else if (text === 'User Requests') {
+          payload.section = 'userreq';
+        }
+
+        const res = await axios.post(`${URI}/notification/resolvenotification`, payload, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }).then(res => {
+          const obj = res?.data?.notificationObject;
+          const updatedNotificaton =
+            (obj?.department || 0) +
+            (obj?.users || 0) +
+            (obj?.tickets || 0) +
+            (obj?.passreq || 0) +
+            (obj?.userreq || 0) +
+            (obj?.profile || 0);
+          dispatch(setNotificationCount(updatedNotificaton));
+        }).catch(err => {
+          // Handle error and show toast
+          if (err.response && err.response.data && err.response.data.message) {
+            toast.error(err.response.data.message); // For 400, 401, etc.
+          } else {
+            toast.error("Something went wrong");
+          }
+        });
       }
 
-      const res = await axios.post(`${URI}/notification/resolvenotification`, payload, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res => {
-        const obj = res?.data?.notificationObject;
-        const updatedNotificaton =
-          (obj?.department || 0) +
-          (obj?.users || 0) +
-          (obj?.tickets || 0) +
-          (obj?.passreq || 0) +
-          (obj?.userreq || 0) +
-          (obj?.profile || 0);
-        dispatch(setNotificationCount(updatedNotificaton));
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
 
     } catch (error) {
       console.log('While resolve notification', error);
@@ -370,11 +376,7 @@ function Dashboard() {
             icon: <FontAwesomeIcon icon={faTicketAlt} />,
             text: 'All Tickets',
           },
-          {
-            to: '/dashboard/password-requests',
-            icon: <FontAwesomeIcon icon={faLock} />,
-            text: 'Password Requests',
-          },
+
           {
             to: '/dashboard/overview',
             icon: <FontAwesomeIcon icon={faChartBar} />,
@@ -405,7 +407,7 @@ function Dashboard() {
             {sidebarExpanded ? <FontAwesomeIcon icon={faTimes} /> : <FontAwesomeIcon icon={faBars} />}
           </button>
           <div className="sidebar-logo">
-            <span className="sidebar-logo-icon">🎫</span>
+            <span className="sidebar-logo-icon"><img src="/favicon.ico" alt="" /></span>
             <span className="sidebar-logo-text">TMS</span>
           </div>
         </div>
@@ -457,14 +459,14 @@ function Dashboard() {
             {
               notificationCount > 0 &&
               <button
-              className="notification-btn"
-              aria-label="Notifications"
-            >
-              <FontAwesomeIcon icon={faBell} />
-              {notificationCount > 0 && (
-                <span className="notification-badge">{notificationCount}</span>
-              )}
-            </button>
+                className="notification-btn"
+                aria-label="Notifications"
+              >
+                <FontAwesomeIcon icon={faBell} />
+                {notificationCount > 0 && (
+                  <span className="notification-badge">{notificationCount}</span>
+                )}
+              </button>
             }
             {/* modes day and night  */}
             <button
