@@ -340,7 +340,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
           Cancel
         </button>
         {
-          loading ? <button>
+          loading ? <button className="btn btn-primary">
             <img src="/img/loader.png" className='Loader' alt="loader" />
           </button>
             :

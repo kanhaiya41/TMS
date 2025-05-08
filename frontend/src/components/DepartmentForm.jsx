@@ -237,7 +237,7 @@ function DepartmentForm({ onSubmit, onCancel, initialData = null, allUsers = [],
           Cancel
         </button>
         {
-          loading ? <button>
+          loading ? <button className="btn btn-primary">
             <img src="/img/loader.png" className='Loader' alt="loader" />
           </button>
             :
