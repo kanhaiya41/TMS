@@ -243,7 +243,7 @@ function Signup({ verifySuperAdmin }) {
                         {/* {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>} */}
                     </div>
                     {
-                        loading ? <button>
+                        loading ? <button className="btn btn-primary btn-block">
                             <img src="/img/loader.png" className='Loader' alt="loader" />
                         </button>
                             :

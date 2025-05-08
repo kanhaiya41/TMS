@@ -305,7 +305,7 @@ function Login() {
                   </select>
                 </div>
                 {
-                  loading ? <button>
+                  loading ? <button className="btn btn-primary btn-block">
                     <img src="/img/loader.png" className='Loader' alt="loader" />
                   </button>
                     :
