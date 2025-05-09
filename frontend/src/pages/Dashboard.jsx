@@ -117,7 +117,7 @@ function Dashboard() {
           navigate('/dashboard/departments');
           break;
         case 'superadmin':
-          navigate('/dashboard/branches');
+          navigate('/dashboard/overview');
           break;
         default:
           navigate('/dashboard/overview');
@@ -129,8 +129,6 @@ function Dashboard() {
     switch (path) {
       case 'tickets':
         return 'Tickets';
-      case 'department':
-        return 'Department Overview';
       case 'executives':
         return 'Manage Executives';
       case 'departments':
@@ -279,7 +277,7 @@ function Dashboard() {
           {
             to: '/dashboard/department',
             icon: <FontAwesomeIcon icon={faChartBar} />,
-            text: 'Department',
+            text: 'System Overview',
           },
           {
             to: '/dashboard/executives',
@@ -362,6 +360,11 @@ function Dashboard() {
       case 'superadmin':
         items.unshift(
           {
+            to: '/dashboard/overview',
+            icon: <FontAwesomeIcon icon={faChartBar} />,
+            text: 'System Overview',
+          },
+          {
             to: '/dashboard/branches',
             icon: <FontAwesomeIcon icon={faBuilding} />,
             text: 'Branches',
@@ -377,15 +380,11 @@ function Dashboard() {
             text: 'All Tickets',
           },
 
-          {
-            to: '/dashboard/overview',
-            icon: <FontAwesomeIcon icon={faChartBar} />,
-            text: 'System Overview',
-          }
+          
         );
         break;
 
-      default:
+      default: <NotFound />
         break;
     }
 

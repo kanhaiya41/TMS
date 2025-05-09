@@ -16,7 +16,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
     mobile: initialData?.mobile || '',
     address: initialData?.address || '',
     department: initialData?.department || user?.department || '',
-    branches: initialData?.branches || [],
+    branches: [],
     branch: initialData?.branch || user?.branch || '',
     name: initialData?.name || ''
   });
@@ -353,7 +353,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
               }
             )
           }
-          
+
           fetchAllUsers();
           onCancel();
           setFormData({

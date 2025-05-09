@@ -243,7 +243,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     alert('Admin deleted successfully!');
   };
 
-  const handleUpdateTicketStatus = async(ticketId, status) => {
+  const handleUpdateTicketStatus = async (ticketId, status) => {
     try {
       const res = await axios.post(`${URI}/executive/updateticketstatus`, { ticketId, status }, {
         headers: {
@@ -345,6 +345,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
   // Render different content based on the view
   const renderContent = () => {
     switch (view) {
+      case 'overview':
+        return renderOverviewView();
       case 'branches':
         return renderBranchesView();
       case 'admins':
@@ -353,8 +355,6 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       //   return renderPasswordRequestsView();
       case 'tickets':
         return renderTicketsView();
-      case 'overview':
-        return renderOverviewView();
       default:
         return renderOverviewView();
     }

@@ -53,7 +53,6 @@ export const makeAdmin = async (req, res) => {
                 { name: { $in: branches } },
                 { $set: { admin: username } }
             );
-
         }
 
         const user = await Admin({ username, email, name, password: hashedPassword, mobile, branches, address, profile: imageUrl, designation });
@@ -159,7 +158,18 @@ export const updateBranch = async (req, res) => {
         let branchUpdated = false;
 
         if (req.body?.name && branch?.name !== req?.body?.name) {
-            const name = await Branch.findByIdAndUpdate(branchId, { name: req.body.name });
+            const oldBranch = branch.name;           // Jo branch replace karni hai
+            const newBranch = req.body.branch;       // Nayi branch jo set karni hai
+
+            const updateAdmin = await Admin.findOneAndUpdate(
+                { branches: oldBranch },
+                {
+                    $set: {
+                        "branches.$": newBranch   // $ positional operator se specific branch update hoti hai
+                    }
+                },
+                { new: true }
+            ); const name = await Branch.findByIdAndUpdate(branchId, { name: req.body.name });
             branchUpdated = true;
         }
         if (req.body?.location && branch?.location !== req?.body?.location) {
@@ -186,11 +196,18 @@ export const updateBranch = async (req, res) => {
 
             const updateAdmin = await Admin.findOneAndUpdate(
                 { username: req.body.admin },
-                { $addToSet: { branches: adminBranch.name } } // Use $addToSet to avoid duplicates
+                { $addToSet: { branches: adminBranch.name } },
+                { new: true } // Use $addToSet to avoid duplicates
             );
 
-            const updateNotify = await Notification.findOneAndUpdate({ user: prevAdmin._id }, { $pull: { branches: adminBranch.name } });
-            const updatenewNotify = await Notification.findOneAndUpdate({ user: updateAdminAdmin._id }, { $push: { branches: adminBranch.name } });
+
+            const updateNotify = await Notification.findOneAndUpdate(
+                { user: prevAdmin._id },
+                { $pull: { branches: adminBranch.name } },
+                { new: true } // optional: agar updated document chahiye
+            );
+            const updatenewNotify = await Notification.findOneAndUpdate({ user: updateAdmin._id }, { $addToSet: { branches: { $each: Array.isArray(req.body.branches) ? req.body.branches : [req.body.branches] } } },
+                { new: true });
 
             branchUpdated = true;
         }

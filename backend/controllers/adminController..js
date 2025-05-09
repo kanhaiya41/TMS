@@ -236,6 +236,7 @@ export const updateUser = async (req, res) => {
         if (req.body.designation === 'admin') {
             user = await Admin.findById(userId);
             if (req.body?.username && user?.username !== req?.body?.username) {
+                const branch = await Branch.findOneAndUpdate({ admin: user?.username }, { admin: req.body.username });
                 const username = await Admin.findByIdAndUpdate(userId, { username: req.body.username });
                 userUpdated = true;
             }
@@ -256,11 +257,46 @@ export const updateUser = async (req, res) => {
                 const mobile = await Admin.findByIdAndUpdate(userId, { mobile: req.body.mobile });
                 userUpdated = true;
             }
-            if (req.body?.branches && user?.branches !== req?.body?.branches) {
-                const branch = await Admin.findByIdAndUpdate(userId, { branches: req.body.branches });
-                const notifyBranches = await Notification.findOneAndUpdate({ user: userId }, { branches: req.body.branches });
-                userUpdated = true;
+            if (req.body?.branches) {
+                // Normalize to array
+                if (!Array.isArray(req.body.branches)) {
+                    req.body.branches = [req.body.branches];
+                }
+
+                // Clean comma-separated strings
+                req.body.branches = req.body.branches
+                    .flatMap(b => b.split(','))
+                    .map(b => b.trim())
+                    .filter(Boolean);
+
+                // Compare old and new branches deeply
+                const isSameBranches = JSON.stringify(user?.branches?.sort()) === JSON.stringify(req.body.branches?.sort());
+
+                if (!isSameBranches && req.body.branches.length > 0) {
+
+                    await Branch.updateMany(
+                        { name: { $in: req.body.branches } },
+                        { $set: { admin: req.body.username } }
+                    );
+
+                    const cleanBranches = req.body.branches;
+
+                    await Admin.findByIdAndUpdate(
+                        userId,
+                        { $addToSet: { branches: { $each: cleanBranches } } },
+                        { new: true }
+                    );
+
+                    await Notification.findOneAndUpdate(
+                        { user: userId },
+                        { $addToSet: { branches: { $each: cleanBranches } } },
+                        { new: true }
+                    );
+
+                    userUpdated = true;
+                }
             }
+
             if (req.body?.address && user?.address !== req?.body?.address) {
                 const address = await Admin.findByIdAndUpdate(userId, { address: req.body.address });
                 userUpdated = true;

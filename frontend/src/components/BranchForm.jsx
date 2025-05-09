@@ -2,6 +2,8 @@ import axios from 'axios';
 import { useEffect, useState } from 'react';
 import URI from '../utills';
 import toast from 'react-hot-toast';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
 
 function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }) {
   const [formData, setFormData] = useState({
@@ -182,12 +184,12 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
       </div>
 
       <div className="form-group">
-        <label htmlFor="adminId" className="form-label">Branch Admin</label>
+        <label htmlFor="admin" className="form-label">Branch Admin</label>
         <select
-          id="adminId"
-          name="adminId"
+          id="admin"
+          name="admin"
           className="form-select"
-          value={formData?.admin}
+          // value={formData?.admin}
           onChange={handleChange}
         >
           <option value="" selected disabled>Select an admin (optional)</option>
@@ -196,6 +198,10 @@ function BranchForm({ onCancel, fetchBranches, initialData = null, admins = [] }
               {admin?.username} - {admin?.branches?.map(b => (<>{b}, </>))}
             </option>
           ))}
+          {
+            initialData?.admin && <option value="" style={{color:'red'}}>Remove Admin</option>
+          }
+
         </select>
       </div>
 
