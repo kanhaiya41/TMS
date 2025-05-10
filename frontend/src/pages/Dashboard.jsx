@@ -108,13 +108,13 @@ function Dashboard() {
           navigate('/dashboard/tickets');
           break;
         case 'Manager':
-          navigate('/dashboard/department');
+          navigate('/dashboard/overview');
           break;
         case 'Team Leader':
-          navigate('/dashboard/executives');
+          navigate('/dashboard/overview');
           break;
         case 'admin':
-          navigate('/dashboard/departments');
+          navigate('/dashboard/overview');
           break;
         case 'superadmin':
           navigate('/dashboard/overview');
@@ -137,6 +137,12 @@ function Dashboard() {
         return 'Branch Management';
       case 'profile':
         return 'User Profile';
+      case 'leadership':
+        return 'Leadership'
+      case 'password-requests':
+        return 'Password Requests'
+      case 'user-requests':
+        return 'User Requests'
       default:
         return 'Dashboard';
     }
@@ -183,7 +189,7 @@ function Dashboard() {
       const payload = {
         user: user?._id
       }
-      if (text === 'Branches' || text === 'System Overview') {
+      if (text === 'Branches' || text === 'System Overview' || text === 'Overview') {
         return '';
       }
       else {
@@ -205,15 +211,10 @@ function Dashboard() {
         else if (text === 'Departments') {
           payload.section = 'department';
         }
-        else if (text === 'Executives') {
+        else if (text === 'User Management') {
           payload.section = 'users';
         }
-        else if (text === 'Admins') {
-          payload.section = 'users';
-        }
-        else if (text === 'Team Leaders & Managers') {
-          payload.section = 'users';
-        }
+
         else if (text === 'Password Requests') {
           payload.section = 'passreq';
         }
@@ -275,14 +276,14 @@ function Dashboard() {
       case 'Manager':
         items.unshift(
           {
-            to: '/dashboard/department',
+            to: '/dashboard/overview',
             icon: <FontAwesomeIcon icon={faChartBar} />,
             text: 'System Overview',
           },
           {
             to: '/dashboard/executives',
             icon: <FontAwesomeIcon icon={faUser} />,
-            text: 'Executives',
+            text: 'User Management',
           },
           {
             to: '/dashboard/tickets',
@@ -305,9 +306,14 @@ function Dashboard() {
       case 'Team Leader':
         items.unshift(
           {
+            to: '/dashboard/overview',
+            icon: <FontAwesomeIcon icon={faChartBar} />,
+            text: 'Overview',
+          },
+          {
             to: '/dashboard/executives',
             icon: <FontAwesomeIcon icon={faUser} />,
-            text: 'Executives',
+            text: 'User Management',
           },
           {
             to: '/dashboard/tickets',
@@ -330,6 +336,11 @@ function Dashboard() {
       case 'admin':
         items.unshift(
           {
+            to: '/dashboard/overview',
+            icon: <FontAwesomeIcon icon={faChartBar} />,
+            text: 'System Overview',
+          },
+          {
             to: '/dashboard/departments',
             icon: <FontAwesomeIcon icon={faBuilding} />,
             text: 'Departments',
@@ -337,7 +348,7 @@ function Dashboard() {
           {
             to: '/dashboard/leadership',
             icon: <FontAwesomeIcon icon={faUserCog} />,
-            text: 'Team Leaders & Managers',
+            text: 'User Management',
           },
           {
             to: '/dashboard/tickets',
@@ -372,7 +383,7 @@ function Dashboard() {
           {
             to: '/dashboard/admins',
             icon: <FontAwesomeIcon icon={faUserCog} />,
-            text: 'Admins',
+            text: 'User Management',
           },
           {
             to: '/dashboard/tickets',
@@ -380,7 +391,7 @@ function Dashboard() {
             text: 'All Tickets',
           },
 
-          
+
         );
         break;
 
@@ -446,11 +457,15 @@ function Dashboard() {
       <main className={`main-content ${sidebarExpanded ? 'sidebar-expanded' : ''}`}>
         <div className="top-nav">
           <div className="top-nav-left">
-            <button className="sidebar-toggle"
-              // hidden-sm mr-3"
-              onClick={toggleSidebar}>
-              {sidebarExpanded ? <FontAwesomeIcon icon={faTimes} /> : <FontAwesomeIcon icon={faBars} />}
-            </button>
+            {
+              user?.designation === 'Executive' ? '' :
+                <button className="sidebar-toggle"
+                  // hidden-sm mr-3"
+                  onClick={()=>navigate('/dashboard/overview')}>
+                  <FontAwesomeIcon icon={faTimes} />
+                </button>
+            }
+
             <h2 className="page-title">{pageTitle}</h2>
           </div>
 
@@ -555,7 +570,7 @@ function Dashboard() {
               user?.designation === 'superadmin' ? <SuperAdminPanel user={user} view="admins" /> : <NotFound />
             } />
             <Route path="/overview/*" element={
-              user?.designation === 'superadmin' ? <SuperAdminPanel user={user} view="overview" /> : <NotFound />
+              user?.designation === 'superadmin' ? <SuperAdminPanel user={user} view="overview" /> : user?.designation === 'admin' ? <AdminPanel user={user} view='overview' /> : user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view='overview' /> :user?.designation === 'Manager' ? <ManagerPanel user={user} view='overview' /> : <NotFound />
             } />
 
 

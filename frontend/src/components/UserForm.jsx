@@ -284,6 +284,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
               )
             }
             fetchAllUsers();
+            onCancel();
             setFormData({
               username: '',
               email: '',
@@ -434,6 +435,20 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
       </div>
 
       <div className="form-group">
+        <label htmlFor="mobile" className="form-label">Mobile Number</label>
+        <input
+          type="number"
+          id="mobile"
+          name="mobile"
+          className={`form-control ${errors?.mobile ? 'border-error' : ''}`}
+          value={formData?.mobile}
+          onChange={handleChange}
+          placeholder="Enter mobile number"
+        />
+        {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
+      </div>
+
+      <div className="form-group">
         <label htmlFor="password" className="form-label">Password</label>
         <input
           type="password"
@@ -459,20 +474,6 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
           placeholder="Confirm Password"
         />
         {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="mobile" className="form-label">Mobile Number</label>
-        <input
-          type="number"
-          id="mobile"
-          name="mobile"
-          className={`form-control ${errors?.mobile ? 'border-error' : ''}`}
-          value={formData?.mobile}
-          onChange={handleChange}
-          placeholder="Enter mobile number"
-        />
-        {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
       </div>
 
       {

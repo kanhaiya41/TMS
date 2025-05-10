@@ -13,6 +13,7 @@ import { faBell, faBuilding, faChartBar, faEdit, faEye, faMoon, faUser } from '@
 import { faBars, faChartLine, faGear, faLock, faSignOut, faTicketAlt, faTimes, faTrash, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import TicketForm from '../../components/TicketForm';
+import { useNavigate } from 'react-router-dom';
 
 function TeamLeaderPanel({ view = 'executives' }) {
 
@@ -39,6 +40,35 @@ function TeamLeaderPanel({ view = 'executives' }) {
   const [reAssignto, setReAssignto] = useState('');
   const [userRequest, setUserRequest] = useState();
 
+  const navigate = useNavigate();
+
+  const [stats, setStats] = useState({
+    // totalBranches: 0,
+    // totalDepartments: 0,
+    totalUsers: 0,
+    totalTickets: 0,
+    openTickets: 0,
+    resolvedTickets: 0,
+    pendingPasswordRequests: 0,
+    forgetPassRequest: 0
+  });
+
+  useEffect(() => {
+    const stats = {
+      // totalBranches: branches?.length,
+      // totalDepartments: departments.length,
+      totalUsers: allUsers?.length,
+      totalTickets: tickets?.length,
+      openTickets: tickets.filter(t => t.status === 'open').length,
+      resolvedTickets: tickets.filter(t => t.status === 'resolved').length,
+      pendingPasswordRequests: userRequest?.filter((req) => req.status === 'pending')?.length,
+
+      forgetPassRequest: allRequests?.filter((req) => user?.department === req?.department &&
+        req?.designation === 'Executive' &&
+        req?.branch === user?.branch).length
+    };
+    setStats(stats);
+  }, [allUsers, tickets, allRequests, userRequest]);
 
   // fetch password request 
   const getAllRequests = async () => {
@@ -181,6 +211,16 @@ function TeamLeaderPanel({ view = 'executives' }) {
       day: 'numeric'
     });
   };
+
+  const formatTime = (timeString) => {
+  const time = new Date(timeString);
+  return time.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true 
+  });
+};
+
 
   const handleEditUser = (userId) => {
     const userToEdit = allUsers?.find(exec => exec?._id === userId);
@@ -379,6 +419,8 @@ function TeamLeaderPanel({ view = 'executives' }) {
   // Render different content based on the view
   const renderContent = () => {
     switch (view) {
+      case 'overview':
+        return renderOverviewView();
       case 'executives':
         return renderExecutivesView();
       case 'tickets':
@@ -391,6 +433,128 @@ function TeamLeaderPanel({ view = 'executives' }) {
         return renderExecutivesView();
     }
   };
+
+  const renderOverviewView = () => (
+    <>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold">System Overview</h2>
+        <p className="text-muted">Admin Overview of the Ticketing System</p>
+      </div>
+
+      <div className="dashboard-grid" >
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/executives')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Total Users</h3>
+            <div className="stat-card-icon green">
+              <FontAwesomeIcon icon={faUser} />
+              {/* <FaUsers /> */}
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.totalUsers}</div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/tickets')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Total Tickets</h3>
+            <div className="stat-card-icon orange">
+              <FontAwesomeIcon icon={faTicketAlt} />
+              {/* <FaTicketAlt /> */}
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.totalTickets}</div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/user-requests')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Pending Requests</h3>
+            <div className="stat-card-icon orange">
+              <FontAwesomeIcon icon={faLock} />
+              {/* <FaTicketAlt /> */}
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.pendingPasswordRequests}</div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/password-requests')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Password Requests</h3>
+            <div className="stat-card-icon red">
+              <FontAwesomeIcon icon={faLock} />
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.forgetPassRequest}</div>
+        </div>
+
+      </div>
+
+      <div className="grid grid-2 gap-4 mt-4">
+        <div className="card" onClick={() => navigate('/dashboard/tickets')} >
+          <div className="card-header">
+            <h3>Ticket Status</h3>
+          </div>
+          <div className="card-body">
+            <div className="mb-4">
+              <h4 className="text-md font-medium mb-2">Open Tickets</h4>
+              <div className="h-4 bg-gray-200 rounded-full">
+                <div
+                  className="h-4 bg-warning rounded-full"
+                  style={{ width: `${(stats?.openTickets / stats?.totalTickets) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-sm">{stats?.openTickets} tickets</span>
+                <span className="text-sm">{Math.round((stats?.openTickets / stats?.totalTickets) * 100)}%</span>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h4 className="text-md font-medium mb-2">In Progress</h4>
+              <div className="h-4 bg-gray-200 rounded-full">
+                <div
+                  className="h-4 bg-primary rounded-full"
+                  style={{ width: `${((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-sm">{stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets} tickets</span>
+                <span className="text-sm">{Math.round(((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100)}%</span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-md font-medium mb-2">Resolved</h4>
+              <div className="h-4 bg-gray-200 rounded-full">
+                <div
+                  className="h-4 bg-success rounded-full"
+                  style={{ width: `${(stats?.resolvedTickets / stats?.totalTickets) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-sm">{stats?.resolvedTickets} tickets</span>
+                <span className="text-sm">{Math.round((stats?.resolvedTickets / stats?.totalTickets) * 100)}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" onClick={() => navigate('/dashboard/password-requests')}>
+          <div className="card-header">
+            <h3>Password Requests</h3>
+          </div>
+          <div className="card-body">
+            <div className="flex flex-col items-center justify-center h-full">
+              <div className="text-5xl font-bold text-primary mb-2">{stats?.pendingPasswordRequests}</div>
+              <p className="text-muted">Pending requests</p>
+              <button className="btn btn-outline mt-4">View All Requests</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </>
+  );
 
   const renderExecutivesView = () => (
     <>
@@ -640,7 +804,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                               <td>{ticket?.name}</td>
                               <td>{ticket?.issuedby}</td>
                               {/* <td>{creator ? creator.name : 'Unknown'}</td> */}
-                              <td>{formatDate(ticket?.date)}</td>
+                              <td>{formatDate(ticket?.createdAt)}</td>
                               <td>{ticket?.subject}</td>
                               <td>
                                 <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
@@ -893,12 +1057,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                                       Delete
                                     </button>
                                   </> :
-                                  <button
-                                    className="btn btn-sm btn-error"
-                                  // onClick={() => deleteUpdateRequest(request?._id)}
-                                  >
-                                    View
-                                  </button>
+                                  'Accepted'
                               }
                             </div>
 
@@ -955,7 +1114,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                       </span>
                     </div>
                     <p className="text-sm text-muted">
-                      Created: {formatDate(selectedTicket?.date)} , {selectedTicket?.time}
+                      Created: {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
                     </p>
                   </div>
 

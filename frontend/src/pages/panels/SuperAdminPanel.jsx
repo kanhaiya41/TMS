@@ -14,6 +14,7 @@ import UserForm from '../../components/UserForm';
 import axios from 'axios';
 import URI from '../../utills';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 function SuperAdminPanel({ user, view = 'overview' }) {
 
@@ -36,6 +37,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
   const [comment, setComment] = useState('');
   const [departments, setDepartments] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+
+  const navigate = useNavigate();
 
   // Statistics
   const [stats, setStats] = useState({
@@ -368,7 +371,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       </div>
 
       <div className="dashboard-grid">
-        <div className="stat-card">
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/branches')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Branches</h3>
             <div className="stat-card-icon blue">
@@ -379,7 +383,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           <div className="stat-card-value">{stats?.totalBranches}</div>
         </div>
 
-        {/* <div className="stat-card">
+        {/* <div className="stat-card" navigate=''>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Departments</h3>
             <div className="stat-card-icon blue">
@@ -389,7 +393,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           <div className="stat-card-value">{stats?.totalDepartments}</div>
         </div> */}
 
-        <div className="stat-card">
+        <div className="stat-card" onClick={() => navigate('/dashboard/admins')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Total Users</h3>
             <div className="stat-card-icon blue">
@@ -400,7 +404,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           <div className="stat-card-value">{stats?.totalUsers}</div>
         </div>
 
-        <div className="stat-card">
+        <div className="stat-card" onClick={() => navigate('/dashboard/tickets')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Total Tickets</h3>
             <div className="stat-card-icon orange">
@@ -413,7 +417,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       </div>
 
       <div className="grid grid-2 gap-4 mt-4">
-        <div className="card">
+        <div className="card" onClick={() => navigate('/dashboard/tickets')}>
           <div className="card-header">
             <h3>Ticket Status</h3>
           </div>
@@ -462,66 +466,63 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card" onClick={() => navigate('/dashboard/branches')}>
           <div className="card-header">
-            <h3>Password Requests</h3>
+            <h3>Branch Summary</h3>
           </div>
-          <div className="card-body">
-            <div className="flex flex-col items-center justify-center h-full">
-              <div className="text-5xl font-bold text-primary mb-2">{stats?.pendingPasswordRequests}</div>
-              <p className="text-muted">Pending requests</p>
-              <button className="btn btn-outline mt-4">View All Requests</button>
+
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Branch</th>
+                    <th>Location</th>
+                    <th>Admin</th>
+                    {/* <th>Departments</th>
+                  <th>Tickets</th> */}
+                  </tr>
+                </thead>
+                <tbody>
+                  
+                  {branches?.slice(0,3).map(branch => {
+                    const branchAdmin = allUsers?.find(a => a?.username === branch?.admin);
+                    const branchDepartments = mockDepartments.filter(d => d.branchId === branch.id);
+                    const branchTickets = tickets.filter(t =>
+                      branchDepartments.some(d => d.name === t.department)
+                    );
+
+                    return (
+                      <tr key={branch.id}>
+                        <td className="font-medium">{branch.name}</td>
+                        <td>{branch.location}</td>
+                        <td>
+                          {branchAdmin ? (
+                            <div className="flex items-center gap-2" style={{ display: 'flex', justifyContent: 'center' }}>
+                              <img className="user-avatar" src={branchAdmin?.profile ? branchAdmin?.profile : '/img/admin.png'} alt="" />
+                              <span>{branchAdmin.name}</span>
+                            </div>
+                          ) : <span className="text-muted">Not assigned</span>}
+                        </td>
+                        {/* <td>{branch?.departments ? branch?.departments : 0}</td>
+                      <td>{branch?.tickets ? branch?.tickets : 0}</td> */}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
+
         </div>
       </div>
 
-      <div className="card mt-4">
+      {/* <div className="card mt-4">
         <div className="card-header">
           <h3>Branch Summary</h3>
         </div>
-        <div className="card-body p-0">
-          <div className="table-responsive">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Branch</th>
-                  <th>Location</th>
-                  <th>Admin</th>
-                  <th>Departments</th>
-                  <th>Tickets</th>
-                </tr>
-              </thead>
-              <tbody>
-                {branches?.map(branch => {
-                  const branchAdmin = allUsers?.find(a => a?.username === branch?.admin);
-                  const branchDepartments = mockDepartments.filter(d => d.branchId === branch.id);
-                  const branchTickets = tickets.filter(t =>
-                    branchDepartments.some(d => d.name === t.department)
-                  );
-
-                  return (
-                    <tr key={branch.id}>
-                      <td className="font-medium">{branch.name}</td>
-                      <td>{branch.location}</td>
-                      <td>
-                        {branchAdmin ? (
-                          <div className="flex items-center gap-2" style={{ display: 'flex', justifyContent: 'center' }}>
-                            <img className="user-avatar" src={branchAdmin?.profile ? branchAdmin?.profile : '/img/admin.png'} alt="" />
-                            <span>{branchAdmin.name}</span>
-                          </div>
-                        ) : <span className="text-muted">Not assigned</span>}
-                      </td>
-                      <td>{branch?.departments ? branch?.departments : 0}</td>
-                      <td>{branch?.tickets ? branch?.tickets : 0}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+        
+      </div> */}
     </>
   );
 
@@ -737,11 +738,11 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                                     >
                                       Delete
                                     </button>
-                                    <button
+                                    {/* <button
                                       className="btn btn-sm btn-error"
                                     >
                                       View
-                                    </button>
+                                    </button> */}
                                   </div>
                                 </td>
                               </tr>
@@ -851,7 +852,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                             {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
                           </span>
                         </td>
-                        <td>{formatDate(ticket?.date)}</td>
+                        <td>{formatDate(ticket?.createdAt)}</td>
                         <td>
                           <div className="flex gap-2">
                             {ticket?.status !== 'resolved' && (
@@ -969,7 +970,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                       </span>
                     </div>
                     <p className="text-sm text-muted">
-                      Created: {formatDate(selectedTicket?.date)}
+                      Created: {formatDate(selectedTicket?.createdAt)}
                     </p>
                   </div>
                   {

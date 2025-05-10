@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import mockUsers from '../../data/mockUsers';
 import mockTickets from '../../data/mockTickets';
 import mockPasswordRequests from '../../data/mockPasswordRequests';
@@ -32,8 +32,15 @@ function ManagerPanel({ user, view = 'branch' }) {
   const [userToDelete, setUserToDelete] = useState(null);
   const [userRequest, setUserRequest] = useState();
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [reAssignto, setReAssignto] = useState('');
+  const [department, setDepartment] = useState(null);
+  const [comment, setComment] = useState('');
+
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   //fetching APIs
   //fetch team leaders
@@ -186,6 +193,15 @@ function ManagerPanel({ user, view = 'branch' }) {
     });
   };
 
+  const formatTime = (timeString) => {
+    const time = new Date(timeString);
+    return time.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   // Statistics for branch overview
   const getBranchStats = () => {
     return {
@@ -260,6 +276,64 @@ function ManagerPanel({ user, view = 'branch' }) {
     setShowTicketForm(false);
     alert('Ticket created successfully!');
   };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTicket(null);
+  };
+
+  //add comment on ticket
+  const addCommentOnTicket = async () => {
+    try {
+      const ticketId = selectedTicket?._id;
+      const commenter = user?.department;
+      const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        fetchAllTickets();
+        handleCloseModal();
+        setComment('');
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('error while adding comment', error);
+    }
+  }
+
+  const handleViewTicket = (ticket) => {
+    setSelectedTicket(ticket);
+    setIsModalOpen(true);
+  };
+
+  const reAssignTicket = async () => {
+    try {
+      const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto })
+        .then(res => {
+          fetchAllTickets();
+          handleCloseModal();
+          toast.success(res?.data?.message);
+        }).catch(err => {
+          // Handle error and show toast
+          if (err.response && err.response.data && err.response.data.message) {
+            toast.error(err.response.data.message); // For 400, 401, etc.
+          } else {
+            toast.error("Something went wrong");
+          }
+        });
+    } catch (error) {
+      console.log("while Re-Assigning the Ticket", error);
+      toast.error('Error While Re-Assigning the Ticket', error);
+    }
+  }
 
   //update ticket status
   const handleUpdateTicketStatus = async (ticketId, status) => {
@@ -417,7 +491,7 @@ function ManagerPanel({ user, view = 'branch' }) {
             <div className="stat-card-value">{stats?.totalDepartments}</div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => navigate('/dashboard/executives')}>
             <div className="stat-card-header">
               <h3 className="stat-card-title">Team Size</h3>
               <div className="stat-card-icon green">
@@ -432,7 +506,7 @@ function ManagerPanel({ user, view = 'branch' }) {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => navigate('/dashboard/tickets')}>
             <div className="stat-card-header">
               <h3 className="stat-card-title">Tickets</h3>
               <div className="stat-card-icon orange">
@@ -445,7 +519,7 @@ function ManagerPanel({ user, view = 'branch' }) {
             </div>
           </div>
 
-          <div className="stat-card">
+          <div className="stat-card" onClick={() => navigate('/dashboard/user-requests')}>
             <div className="stat-card-header">
               <h3 className="stat-card-title">Pending Requests</h3>
               <div className="stat-card-icon red">
@@ -457,7 +531,7 @@ function ManagerPanel({ user, view = 'branch' }) {
         </div>
 
         <div className="grid grid-2 gap-4 mt-4">
-          <div className="card">
+          <div className="card" onClick={() => navigate('/dashboard/tickets')} >
             <div className="card-header">
               <h3>Recent Tickets</h3>
             </div>
@@ -515,7 +589,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                       const deptTeamLeaders = teamLeaders?.filter(tl => tl?.department === dept?.name);
                       const deptExecutives = executives?.filter(exec => exec?.department === dept?.name);
                       const deptOpenTickets = tickets?.filter(t =>
-                        t.department === dept?.name && t?.status === 'open'
+                        t.department?.some(d => d.name === dept?.name) && t?.status === 'open'
                       );
 
                       return (
@@ -884,7 +958,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                             </td>
                             <td>{formatDate(ticket.createdAt)}</td>
                             <td>
-                              <div className="flex gap-2">
+                              <div className="flex gap-2" style={{ justifyContent: 'center' }}>
                                 {ticket.status !== 'resolved' && (
                                   <>
                                     {ticket.status === 'open' && (
@@ -905,7 +979,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                                     )}
                                   </>
                                 )}
-                                <button className="btn btn-sm btn-outline">View</button>
+                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
                               </div>
                             </td>
                           </tr>
@@ -1108,7 +1182,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                           <td>{request?.reqto}</td>
                           <td style={{ display: 'flex', justifyContent: 'center' }}>
                             {/* {request?.status === 'pending' ? ( */}
-                            <div className="flex gap-2">
+                            <div className="flex gap-2" >
                               {
                                 request?.status === 'pending' ?
                                   <>
@@ -1124,12 +1198,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                                       Delete
                                     </button>
                                   </> :
-                                  <button
-                                    className="btn btn-sm btn-error"
-                                  // onClick={() => deleteUpdateRequest(request?._id)}
-                                  >
-                                    View
-                                  </button>
+                                  'Accepted'
                               }
                             </div>
 
@@ -1157,6 +1226,135 @@ function ManagerPanel({ user, view = 'branch' }) {
   return (
     <div className="animate-fade">
       {renderContent()}
+      {/* Ticket Detail Modal */}
+      {isModalOpen && selectedTicket && (
+        <div className="modal-backdrop" onClick={handleCloseModal}>
+          <div className="modal">
+            <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h3 className="modal-title">Ticket #{selectedTicket?._id}</h3>
+                  <button className="modal-close" onClick={handleCloseModal}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <h4 className="font-bold">{selectedTicket?.subject}</h4>
+                    <div className="flex gap-2 mb-2">
+                      <span className={`badge ${selectedTicket?.status === 'open' ? 'badge-warning' :
+                        selectedTicket?.status === 'in-progress' ? 'badge-primary' :
+                          'badge-success'
+                        }`}>
+                        {selectedTicket?.status === 'in-progress' ? 'In Progress' :
+                          selectedTicket?.status?.charAt(0).toUpperCase() + selectedTicket?.status?.slice(1)}
+                      </span>
+                      <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
+                        selectedTicket?.priority === 'medium' ? 'badge-warning' :
+                          'badge-primary'
+                        }`}>
+                        {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted">
+                      Created: {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2 mb-2">
+                    <span className=''>
+                      {selectedTicket?.name}
+                    </span>
+                    <span className=''>
+                      {selectedTicket?.mobile}
+                    </span>
+                    <span className=''>
+                      {selectedTicket?.email}
+                    </span>
+
+                  </div>
+                  {
+                    selectedTicket?.department?.map((curElem) => (
+                      <div className="mb-4">
+                        <h5 className="font-bold mb-2">{curElem?.name}</h5>
+                        <p>{curElem?.description}</p>
+                      </div>
+                    ))
+                  }
+
+
+                  <div className="mb-4">
+                    <h5 className="font-bold mb-2">Comments ({selectedTicket?.comments?.length})</h5>
+                    {selectedTicket?.comments?.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedTicket?.comments?.map(comment => (
+                          <div key={comment?.id} className="p-2 bg-gray-100 rounded">
+                            <p className="text-sm">{comment?.content}</p>
+                            <p className="text-xs text-muted mt-1">
+                              {formatDate(comment?.createdAt)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted">No comments yet.</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 mb-2">
+
+                    <span >ReAssign to</span>
+                    <select name="" id="" className="form-select" onChange={(e) => setReAssignto(e.target.value)}>
+                      <option value="" disabled selected>ReAssign the Ticket</option>
+                      {
+                        department?.map((curElem) => (
+                          <>
+                            {
+                              user?.department !== curElem?.name &&
+                              <option value={curElem?.name}>{curElem?.name}</option>
+                            }
+                          </>
+                        ))
+                      }
+                    </select>
+                    <button className="btn btn-primary"
+                      onClick={reAssignTicket}
+                    >
+                      ReAssign
+                    </button>
+                  </div>
+
+
+
+                  <div className="form-group">
+                    <label htmlFor="comment" className="form-label">Add Comment</label>
+                    <textarea
+                      id="comment"
+                      className="form-control"
+                      rows="3"
+                      placeholder="Add your comment..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                    ></textarea>
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    className="btn btn-outline"
+                    onClick={handleCloseModal}
+                  >
+                    Close
+                  </button>
+                  <button className="btn btn-primary"
+                    onClick={addCommentOnTicket}
+                  >
+                    Add Comment
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -120,8 +120,8 @@ export const updateTicketStatus = async (req, res) => {
             });
             const mailBody = {
                 from: process.env.USER_EMAIL,
-                to: ticket.email,
-                cc: executive.email,
+                // to: ticket.email,
+                to: executive.email,
                 subject: 'Your Ticket is Resolved',
                 html: `<p>Name: ${ticket?.name} <br>
                 Subject: ${ticket?.subject} <br>

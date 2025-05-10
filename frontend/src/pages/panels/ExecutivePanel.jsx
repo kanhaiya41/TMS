@@ -326,7 +326,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                       </span>
                     </div>
                     <p className="text-sm text-muted">
-                      Created: {formatDate(selectedTicket?.date)}
+                      Created: {formatDate(selectedTicket?.createdAt)}
                     </p>
                   </div>
                   {

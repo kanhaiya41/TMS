@@ -10,11 +10,11 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
 
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
-    email: initialData?.email || '',
+    // email: initialData?.email || '',
     subject: initialData?.subject || '',
     mobile: initialData?.mobile || '',
-    date: initialData?.date || '',
-    time: initialData?.time || '',
+    // date: initialData?.date || '',
+    // time: initialData?.time || '',
     priority: initialData?.priority || ''
   });
 
@@ -100,10 +100,10 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
       toast.error('name is required');
     }
 
-    if (!formData?.email) {
-      newErrors.email = 'email is required';
-      toast.error('email is required');
-    }
+    // if (!formData?.email) {
+    //   newErrors.email = 'email is required';
+    //   toast.error('email is required');
+    // }
 
     if (!formData.subject) {
       newErrors.subject = 'subject is required';
@@ -118,15 +118,15 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
       toast.error('mobile must be 10 characters');
     }
 
-    if (!formData?.date) {
-      newErrors.date = 'date is required';
-      toast.error('date is required');
-    }
+    // if (!formData?.date) {
+    //   newErrors.date = 'date is required';
+    //   toast.error('date is required');
+    // }
 
-    if (!formData.time) {
-      newErrors.time = 'time is required';
-      toast.error('time is required');
-    }
+    // if (!formData.time) {
+    //   newErrors.time = 'time is required';
+    //   toast.error('time is required');
+    // }
 
     if (!formData.priority) {
       newErrors.priority = 'priority is required';
@@ -169,11 +169,11 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
           // Reset form
           setFormData({
             name: '',
-            email: '',
+            // email: '',
             subject: '',
-            date: '',
+            // date: '',
             mobile: '',
-            time: '',
+            // time: '',
             priority: '',
 
           });
@@ -186,9 +186,6 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
             toast.error("Something went wrong");
           }
         });
-
-
-
       }
     } catch (error) {
       console.log('while raising ticket', error);
@@ -216,7 +213,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
         {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
       </div>
 
-      <div className="form-group">
+      {/* <div className="form-group">
         <label htmlFor="email" className="form-label">Email</label>
         <input
           type="email"
@@ -228,7 +225,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
           placeholder="Enter Email"
         />
         {errors.email && <div className="text-error text-sm mt-1">{errors?.email}</div>}
-      </div>
+      </div> */}
 
       <div className="form-group">
         <label htmlFor="subject" className="form-label">Subject</label>
@@ -258,7 +255,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
         {errors?.mobile && <div className="text-error text-sm mt-1">{errors.mobile}</div>}
       </div>
 
-      <div className="form-group">
+      {/* <div className="form-group">
         <label htmlFor="date" className="form-label">Date</label>
         <input
           type="date"
@@ -284,7 +281,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
           placeholder="Time of Ticket Raising"
         />
         {errors?.time && <div className="text-error text-sm mt-1">{errors?.time}</div>}
-      </div>
+      </div> */}
 
       <div className="form-group">
         <label htmlFor="priority" className="form-label">Priority</label>
@@ -308,7 +305,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
           {
             departments?.map(curElem => (
               <>
-                <p>{curElem?.name}</p> <input value={curElem?.name} onChange={handleCheckboxChange} type="checkbox" />
+                <p>{curElem?.name} <input value={curElem?.name} onChange={handleCheckboxChange} type="checkbox" /></p>
               </>
             ))
           }

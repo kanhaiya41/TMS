@@ -14,6 +14,7 @@ import { } from '@fortawesome/free-brands-svg-icons'
 import { faBell, faBuilding, faChartBar, faEdit, faEye, faMoon, faUser } from '@fortawesome/free-regular-svg-icons'
 import { faBars, faChartLine, faGear, faLock, faSignOut, faTicketAlt, faTimes, faTrash, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { useNavigate } from 'react-router-dom';
 
 function AdminPanel({ view = 'departments' }) {
 
@@ -44,6 +45,31 @@ function AdminPanel({ view = 'departments' }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [comment, setComment] = useState('');
   const [userRequest, setUserRequest] = useState();
+
+  const [stats, setStats] = useState({
+    totalBranches: 0,
+    totalDepartments: 0,
+    totalUsers: 0,
+    totalTickets: 0,
+    openTickets: 0,
+    resolvedTickets: 0,
+    pendingPasswordRequests: 0
+  });
+
+  useEffect(() => {
+    const stats = {
+      // totalBranches: branches?.length,
+      totalDepartments: departments.length,
+      totalUsers: allUsers?.length + managers?.length + teamLeaders?.length,
+      totalTickets: tickets?.length,
+      openTickets: tickets.filter(t => t.status === 'open').length,
+      resolvedTickets: tickets.filter(t => t.status === 'resolved').length,
+      pendingPasswordRequests: userRequest?.filter((req)=>req.status==='pending')?.length
+    };
+    setStats(stats);
+  }, [allUsers, tickets, passwordRequests, departments]);
+
+  const navigate = useNavigate();
 
   //fetching APIs
   // fetch password requests
@@ -607,6 +633,8 @@ function AdminPanel({ view = 'departments' }) {
   // Render different content based on the view
   const renderContent = () => {
     switch (view) {
+      case 'overview':
+        return renderOverviewView();
       case 'departments':
         return renderDepartmentsView();
       case 'leadership':
@@ -622,7 +650,127 @@ function AdminPanel({ view = 'departments' }) {
     }
   };
 
-  let sr = 0;
+  const renderOverviewView = () => (
+    <>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold">System Overview</h2>
+        <p className="text-muted">Admin Overview of the Ticketing System</p>
+      </div>
+
+      <div className="dashboard-grid" >
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/departments')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Departments</h3>
+            <div className="stat-card-icon blue">
+              <FontAwesomeIcon icon={faUser} />
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.totalDepartments}</div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/leadership')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Total Users</h3>
+            <div className="stat-card-icon green">
+              <FontAwesomeIcon icon={faUser} />
+              {/* <FaUsers /> */}
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.totalUsers}</div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/tickets')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Total Tickets</h3>
+            <div className="stat-card-icon orange">
+              <FontAwesomeIcon icon={faTicketAlt} />
+              {/* <FaTicketAlt /> */}
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.totalTickets}</div>
+        </div>
+
+        <div className="stat-card" onClick={() => navigate('/dashboard/user-requests')}>
+          <div className="stat-card-header">
+            <h3 className="stat-card-title">Pending Requests</h3>
+            <div className="stat-card-icon orange">
+              <FontAwesomeIcon icon={faLock} />
+              {/* <FaTicketAlt /> */}
+            </div>
+          </div>
+          <div className="stat-card-value">{stats?.pendingPasswordRequests}</div>
+        </div>
+
+      </div>
+
+      <div className="grid grid-2 gap-4 mt-4">
+        <div className="card" onClick={() => navigate('/dashboard/tickets')} >
+          <div className="card-header">
+            <h3>Ticket Status</h3>
+          </div>
+          <div className="card-body">
+            <div className="mb-4">
+              <h4 className="text-md font-medium mb-2">Open Tickets</h4>
+              <div className="h-4 bg-gray-200 rounded-full">
+                <div
+                  className="h-4 bg-warning rounded-full"
+                  style={{ width: `${(stats?.openTickets / stats?.totalTickets) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-sm">{stats?.openTickets} tickets</span>
+                <span className="text-sm">{Math.round((stats?.openTickets / stats?.totalTickets) * 100)}%</span>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h4 className="text-md font-medium mb-2">In Progress</h4>
+              <div className="h-4 bg-gray-200 rounded-full">
+                <div
+                  className="h-4 bg-primary rounded-full"
+                  style={{ width: `${((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-sm">{stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets} tickets</span>
+                <span className="text-sm">{Math.round(((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100)}%</span>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-md font-medium mb-2">Resolved</h4>
+              <div className="h-4 bg-gray-200 rounded-full">
+                <div
+                  className="h-4 bg-success rounded-full"
+                  style={{ width: `${(stats?.resolvedTickets / stats?.totalTickets) * 100}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-sm">{stats?.resolvedTickets} tickets</span>
+                <span className="text-sm">{Math.round((stats?.resolvedTickets / stats?.totalTickets) * 100)}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" onClick={() => navigate('/dashboard/password-requests')}>
+          <div className="card-header">
+            <h3>Password Requests</h3>
+          </div>
+          <div className="card-body">
+            <div className="flex flex-col items-center justify-center h-full">
+              <div className="text-5xl font-bold text-primary mb-2">{stats?.pendingPasswordRequests}</div>
+              <p className="text-muted">Pending requests</p>
+              <button className="btn btn-outline mt-4">View All Requests</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </>
+  );
 
   const renderDepartmentsView = () => (
     <>
@@ -1093,7 +1241,7 @@ function AdminPanel({ view = 'departments' }) {
                                 {ticket?.priority?.charAt(0)?.toUpperCase() + ticket?.priority?.slice(1)}
                               </span>
                             </td>
-                            <td>{formatDate(ticket?.date)}</td>
+                            <td>{formatDate(ticket?.createdAt)}</td>
                             <td>{ticket?.subject}</td>
                             <td>
                               <div className="flex gap-2">
@@ -1295,53 +1443,114 @@ function AdminPanel({ view = 'departments' }) {
                   {userRequest?.map((request, index) => {
                     return (
                       <>
-                        <tr key={request?.id} >
+                        {
+                          request.status === 'pending' &&
+                          <tr key={request?.id} >
 
-                          <td style={{ display: 'flex', justifyContent: 'center' }}>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
 
-                            <div className="flex items-center gap-2">
-                              <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
-                              <span>{request?.username}</span>
-                            </div>
+                              <div className="flex items-center gap-2">
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
+                                <span>{request?.username}</span>
+                              </div>
 
-                          </td>
-                          <td>
-                            {request?.designation}
-                          </td>
-                          <td>{request?.department}</td>
-                          <td>{request?.reqto}</td>
-                          <td style={{ display: 'flex', justifyContent: 'center' }}>
-                            {/* {request?.status === 'pending' ? ( */}
-                            <div className="flex gap-2">
-                              {
-                                request?.status === 'pending' ?
-                                  <>
-                                    <button
-                                      className="btn btn-sm btn-success"
-                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
-                                    >Accept
-                                    </button>
-                                    <button
-                                      className="btn btn-sm btn-error"
-                                      onClick={() => deleteUpdateRequest(request?._id)}
-                                    >
-                                      Delete
-                                    </button>
-                                  </> :
-                                  <button
-                                    className="btn btn-sm btn-error"
-                                  // onClick={() => deleteUpdateRequest(request?._id)}
-                                  >
-                                    View
-                                  </button>
-                              }
-                            </div>
+                            </td>
+                            <td>
+                              {request?.designation}
+                            </td>
+                            <td> {
+                              request?.designation === 'Manager' ? '----' : request?.department ? request?.department : 'N/A'
+                            }
+                            </td>
+                            <td>{request?.reqto}</td>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                              {/* {request?.status === 'pending' ? ( */}
+                              <div className="flex gap-2">
+                                {
+                                  request?.status === 'pending' ?
+                                    <>
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                      >Accept
+                                      </button>
+                                      <button
+                                        className="btn btn-sm btn-error"
+                                        onClick={() => deleteUpdateRequest(request?._id)}
+                                      >
+                                        Delete
+                                      </button>
+                                    </> :
+                                    'Accepted'
+                                  // <button
+                                  //   className="btn btn-sm btn-error"
+                                  // // onClick={() => deleteUpdateRequest(request?._id)}
+                                  // >
+                                  //   View
+                                  // </button>
+                                }
+                              </div>
 
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
+                        }
 
                       </>
+                    );
+                  })}
+                  {userRequest?.map((request, index) => {
+                    return (
+                      <>
+                        {
+                          request.status !== 'pending' &&
+                          <tr key={request?.id} >
 
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+
+                              <div className="flex items-center gap-2">
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
+                                <span>{request?.username}</span>
+                              </div>
+
+                            </td>
+                            <td>
+                              {request?.designation}
+                            </td>
+                            <td>{request?.department}</td>
+                            <td>{request?.reqto}</td>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                              {/* {request?.status === 'pending' ? ( */}
+                              <div className="flex gap-2">
+                                {
+                                  request?.status === 'pending' ?
+                                    <>
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                      >Accept
+                                      </button>
+                                      <button
+                                        className="btn btn-sm btn-error"
+                                        onClick={() => deleteUpdateRequest(request?._id)}
+                                      >
+                                        Delete
+                                      </button>
+                                    </> :
+                                    'Accepted'
+                                  // <button
+                                  //   className="btn btn-sm btn-error"
+                                  // // onClick={() => deleteUpdateRequest(request?._id)}
+                                  // >
+                                  //   View
+                                  // </button>
+                                }
+                              </div>
+
+                            </td>
+                          </tr>
+                        }
+
+                      </>
                     );
                   })}
                 </tbody>
@@ -1434,7 +1643,7 @@ function AdminPanel({ view = 'departments' }) {
                       </span>
                     </div>
                     <p className="text-sm text-muted">
-                      Created: {formatDate(selectedTicket?.date)}
+                      Created: {formatDate(selectedTicket?.createdAt)}
                     </p>
                   </div>
 
