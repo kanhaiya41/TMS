@@ -62,7 +62,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       pendingPasswordRequests: passwordRequests?.length
     };
     setStats(stats);
-  }, [allUsers, tickets, passwordRequests, departments]);
+  }, [allUsers, tickets, passwordRequests, departments,branches]);
 
   //fetching APIs
   const fetchAllUsers = async () => {
@@ -484,8 +484,8 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                   </tr>
                 </thead>
                 <tbody>
-                  
-                  {branches?.slice(0,3).map(branch => {
+
+                  {branches?.slice(0, 3).map(branch => {
                     const branchAdmin = allUsers?.find(a => a?.username === branch?.admin);
                     const branchDepartments = mockDepartments.filter(d => d.branchId === branch.id);
                     const branchTickets = tickets.filter(t =>
@@ -812,7 +812,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>ID</th>
+                    {/* <th>ID</th> */}
                     <th>Title</th>
                     {/* <th>Department</th> */}
                     <th>Branch</th>
@@ -824,13 +824,120 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                 </thead>
                 <tbody>
                   {filteredTickets?.map((ticket, index) => {
-                    // const creator = mockUsers.find(u => u.id === ticket.createdBy);
-                    // const department = mockDepartments.find(d => d.name === ticket.department);
-                    // const branch = department ? mockBranches.find(b => b.id === department.branchId) : null;
-
                     return (
+                      ticket?.status === 'in-progress' &&
                       <tr key={index + 1}>
-                        <td>#{index + 1}</td>
+                        {/* <td>#{index + 1}</td> */}
+                        <td>{ticket?.subject}</td>
+                        {/* <td>{ticket?.department}</td> */}
+                        <td>{ticket?.branch}</td>
+                        <td>
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`}>
+                            {ticket?.status === 'in-progress' ? 'In Progress' :
+                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket?.priority ===
+                            'high' ? 'badge-error' :
+                            ticket?.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}>
+                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                          </span>
+                        </td>
+                        <td>{formatDate(ticket?.createdAt)}</td>
+                        <td>
+                          <div className="flex gap-2">
+                            {ticket?.status !== 'resolved' && (
+                              <>
+                                {ticket?.status === 'open' && (
+                                  <button
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
+                                  >
+                                    Start
+                                  </button>
+                                )}
+                                {ticket?.status === 'in-progress' && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
+                                  >
+                                    Resolve
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)} >View</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredTickets?.map((ticket, index) => {
+                    return (
+                      ticket?.status === 'open' &&
+                      <tr key={index + 1}>
+                        {/* <td>#{index + 1}</td> */}
+                        <td>{ticket?.subject}</td>
+                        {/* <td>{ticket?.department}</td> */}
+                        <td>{ticket?.branch}</td>
+                        <td>
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`}>
+                            {ticket?.status === 'in-progress' ? 'In Progress' :
+                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket?.priority ===
+                            'high' ? 'badge-error' :
+                            ticket?.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}>
+                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                          </span>
+                        </td>
+                        <td>{formatDate(ticket?.createdAt)}</td>
+                        <td>
+                          <div className="flex gap-2">
+                            {ticket?.status !== 'resolved' && (
+                              <>
+                                {ticket?.status === 'open' && (
+                                  <button
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
+                                  >
+                                    Start
+                                  </button>
+                                )}
+                                {ticket?.status === 'in-progress' && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
+                                  >
+                                    Resolve
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)} >View</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredTickets?.map((ticket, index) => {
+                    return (
+                      ticket?.status === 'resolved' &&
+                      <tr key={index + 1}>
+                        {/* <td>#{index + 1}</td> */}
                         <td>{ticket?.subject}</td>
                         {/* <td>{ticket?.department}</td> */}
                         <td>{ticket?.branch}</td>

@@ -229,59 +229,190 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                     </thead>
                     <tbody>
                       {filteredTickets?.map((ticket, index) => (
-                        <tr key={ticket?.id}>
-                          <td>#{index + 1}</td>
-                          <td>{ticket?.name}</td>
+                        ticket?.department?.some(dep => dep.name === user?.department) &&
+                        <>
+                          {
+                            ticket?.status === 'in-progress' &&
+                            <tr key={ticket?.id}>
+                              <td>#{index + 1}</td>
+                              <td>{ticket?.name}</td>
 
-                          <td>
-                            <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                              ticket?.status === 'in-progress' ? 'badge-primary' :
-                                'badge-success'
-                              }`}>
-                              {ticket?.status === 'in-progress' ? 'In Progress' :
-                                ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
-                            </span>
-                          </td>
-                          <td>
-                            {ticket?.subject}
-                            {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                              <td>
+                                <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                  ticket?.status === 'in-progress' ? 'badge-primary' :
+                                    'badge-success'
+                                  }`}>
+                                  {ticket?.status === 'in-progress' ? 'In Progress' :
+                                    ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                                </span>
+                              </td>
+                              <td>
+                                {ticket?.subject}
+                                {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
                             ticket?.priority === 'medium' ? 'badge-warning' :
                               'badge-primary'
                             }`}>
                             {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
                           </span> */}
-                          </td>
-                          {/* <td>{formatDate(ticket?.createdAt)}</td> */}
-                          <td ><div className='flex gap-2'>
-                            {ticket.status !== 'resolved' && (
-                              <>
-                                {ticket.status === 'open' && (
-                                  <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
-                                  >
-                                    Start
-                                  </button>
+                              </td>
+                              {/* <td>{formatDate(ticket?.createdAt)}</td> */}
+                              <td ><div className='flex gap-2' style={{ justifyContent: 'center' }}>
+                                {ticket.status !== 'resolved' && (
+                                  <>
+                                    {ticket.status === 'open' && (
+                                      <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                      >
+                                        Start
+                                      </button>
+                                    )}
+                                    {ticket.status === 'in-progress' && (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                  </>
                                 )}
-                                {ticket.status === 'in-progress' && (
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
-                                  >
-                                    Resolve
-                                  </button>
+                                <button
+                                  className="btn btn-sm btn-outline"
+                                  onClick={() => handleViewTicket(ticket)}
+                                >
+                                  View
+                                </button>
+                              </div>
+                              </td>
+                            </tr>
+                          }
+                        </>
+
+                      ))}
+                      {filteredTickets?.map((ticket, index) => (
+                        ticket?.department?.some(dep => dep.name === user?.department) &&
+                        <>
+                          {
+                            ticket?.status === 'open' &&
+                            <tr key={ticket?.id}>
+                              <td>#{index + 1}</td>
+                              <td>{ticket?.name}</td>
+
+                              <td>
+                                <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                  ticket?.status === 'in-progress' ? 'badge-primary' :
+                                    'badge-success'
+                                  }`}>
+                                  {ticket?.status === 'in-progress' ? 'In Progress' :
+                                    ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                                </span>
+                              </td>
+                              <td>
+                                {ticket?.subject}
+                                {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                            ticket?.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}>
+                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                          </span> */}
+                              </td>
+                              {/* <td>{formatDate(ticket?.createdAt)}</td> */}
+                              <td ><div className='flex gap-2' style={{ justifyContent: 'center' }}>
+                                {ticket.status !== 'resolved' && (
+                                  <>
+                                    {ticket.status === 'open' && (
+                                      <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                      >
+                                        Start
+                                      </button>
+                                    )}
+                                    {ticket.status === 'in-progress' && (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                  </>
                                 )}
-                              </>
-                            )}
-                            <button
-                              className="btn btn-sm btn-outline"
-                              onClick={() => handleViewTicket(ticket)}
-                            >
-                              View
-                            </button>
-                          </div>
-                          </td>
-                        </tr>
+                                <button
+                                  className="btn btn-sm btn-outline"
+                                  onClick={() => handleViewTicket(ticket)}
+                                >
+                                  View
+                                </button>
+                              </div>
+                              </td>
+                            </tr>
+                          }
+                        </>
+
+                      ))}
+                      {filteredTickets?.map((ticket, index) => (
+                        ticket?.department?.some(dep => dep.name === user?.department) &&
+                        <>
+                          {
+                            ticket?.status === 'resolved' &&
+                            <tr key={ticket?.id}>
+                              <td>#{index + 1}</td>
+                              <td>{ticket?.name}</td>
+
+                              <td>
+                                <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                  ticket?.status === 'in-progress' ? 'badge-primary' :
+                                    'badge-success'
+                                  }`}>
+                                  {ticket?.status === 'in-progress' ? 'In Progress' :
+                                    ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                                </span>
+                              </td>
+                              <td>
+                                {ticket?.subject}
+                                {/* <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                            ticket?.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}>
+                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                          </span> */}
+                              </td>
+                              {/* <td>{formatDate(ticket?.createdAt)}</td> */}
+                              <td ><div className='flex gap-2' style={{ justifyContent: 'center' }}>
+                                {ticket.status !== 'resolved' && (
+                                  <>
+                                    {ticket.status === 'open' && (
+                                      <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                      >
+                                        Start
+                                      </button>
+                                    )}
+                                    {ticket.status === 'in-progress' && (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                                <button
+                                  className="btn btn-sm btn-outline"
+                                  onClick={() => handleViewTicket(ticket)}
+                                >
+                                  View
+                                </button>
+                              </div>
+                              </td>
+                            </tr>
+                          }
+                        </>
+
                       ))}
                     </tbody>
                   </table>
@@ -331,6 +462,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                   </div>
                   {
                     selectedTicket?.department?.map(curElem => (
+                      curElem?.name === user?.department &&
                       <div className="mb-4">
                         <h5 className="font-bold mb-2">{curElem?.name}</h5>
                         <p>{curElem?.description}</p>

@@ -175,7 +175,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setTickets(res?.data?.data?.filter((tickt) => tickt?.branch === user?.branch && tickt?.department?.filter((dept) => dept?.name === user?.department)));
+        setTickets(res?.data?.data?.filter((tickt) => tickt?.branch === user?.branch && tickt?.department?.some((dept) => dept?.name === user?.department)));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -544,7 +544,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           </div>
           <div className="card-body">
             <div className="flex flex-col items-center justify-center h-full">
-              <div className="text-5xl font-bold text-primary mb-2">{stats?.pendingPasswordRequests}</div>
+              <div className="text-5xl font-bold text-primary mb-2">{stats?.forgetPassRequest}</div>
               <p className="text-muted">Pending requests</p>
               <button className="btn btn-outline mt-4">View All Requests</button>
             </div>
@@ -794,12 +794,128 @@ function TeamLeaderPanel({ view = 'executives' }) {
                   </thead>
                   <tbody>
                     {filteredTickets?.map(ticket => {
-                      // const creator = mockUsers.find(u => u.id === ticket?.createdBy);
-
                       return (
                         <>
                           {
-                            // ticket?.department === user?.department && ticket?.branch === user?.branch &&
+                            ticket?.status==='in-progress' &&
+                            <tr key={ticket?.id}>
+                              <td>{ticket?.name}</td>
+                              <td>{ticket?.issuedby}</td>
+                              {/* <td>{creator ? creator.name : 'Unknown'}</td> */}
+                              <td>{formatDate(ticket?.createdAt)}</td>
+                              <td>{ticket?.subject}</td>
+                              <td>
+                                <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                  ticket?.status === 'in-progress' ? 'badge-primary' :
+                                    'badge-success'
+                                  }`}>
+                                  {ticket?.status === 'in-progress' ? 'In Progress' :
+                                    ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                                  ticket?.priority === 'medium' ? 'badge-warning' :
+                                    'badge-primary'
+                                  }`}>
+                                  {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                                </span>
+                              </td>
+
+                              <td>
+                                <div className="flex gap-2">
+                                  {ticket?.status !== 'resolved' && (
+                                    <>
+                                      {ticket?.status === 'open' && (
+                                        <button
+                                          className="btn btn-sm btn-primary"
+                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
+                                        >
+                                          Start
+                                        </button>
+                                      )}
+                                      {ticket?.status === 'in-progress' && (
+                                        <button
+                                          className="btn btn-sm btn-success"
+                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
+                                        >
+                                          Resolve
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                  <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                                </div>
+                              </td>
+                            </tr>
+                          }
+                        </>
+                      );
+                    })}
+                    {filteredTickets?.map(ticket => {
+                      return (
+                        <>
+                          {
+                            ticket?.status==='open' &&
+                            <tr key={ticket?.id}>
+                              <td>{ticket?.name}</td>
+                              <td>{ticket?.issuedby}</td>
+                              {/* <td>{creator ? creator.name : 'Unknown'}</td> */}
+                              <td>{formatDate(ticket?.createdAt)}</td>
+                              <td>{ticket?.subject}</td>
+                              <td>
+                                <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                  ticket?.status === 'in-progress' ? 'badge-primary' :
+                                    'badge-success'
+                                  }`}>
+                                  {ticket?.status === 'in-progress' ? 'In Progress' :
+                                    ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`badge ${ticket?.priority === 'high' ? 'badge-error' :
+                                  ticket?.priority === 'medium' ? 'badge-warning' :
+                                    'badge-primary'
+                                  }`}>
+                                  {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                                </span>
+                              </td>
+
+                              <td>
+                                <div className="flex gap-2">
+                                  {ticket?.status !== 'resolved' && (
+                                    <>
+                                      {ticket?.status === 'open' && (
+                                        <button
+                                          className="btn btn-sm btn-primary"
+                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
+                                        >
+                                          Start
+                                        </button>
+                                      )}
+                                      {ticket?.status === 'in-progress' && (
+                                        <button
+                                          className="btn btn-sm btn-success"
+                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
+                                        >
+                                          Resolve
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                  <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                                </div>
+                              </td>
+                            </tr>
+                          }
+                        </>
+                      );
+                    })}
+                    {filteredTickets?.map(ticket => {
+                      return (
+                        <>
+                          {
+                            ticket?.status==='resolved' &&
                             <tr key={ticket?.id}>
                               <td>{ticket?.name}</td>
                               <td>{ticket?.issuedby}</td>
@@ -1132,6 +1248,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                   </div>
                   {
                     selectedTicket?.department?.map((curElem) => (
+                      curElem?.name===user?.department &&
                       <div className="mb-4">
                         <h5 className="font-bold mb-2">{curElem?.name}</h5>
                         <p>{curElem?.description}</p>

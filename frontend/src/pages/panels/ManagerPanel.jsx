@@ -212,7 +212,7 @@ function ManagerPanel({ user, view = 'branch' }) {
       openTickets: tickets.filter(t => t.status === 'open')?.length,
       resolvedTickets: tickets.filter(t => t.status === 'resolved')?.length,
       // pendingRequests: passwordRequests.filter(r => r.status === 'pending')?.length
-      pendingRequests: passwordRequests?.length
+      pendingRequests: userRequest?.length
     };
   };
 
@@ -922,7 +922,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                   <table className="table">
                     <thead>
                       <tr>
-                        <th>ID</th>
+                        {/* <th>ID</th> */}
                         <th>Title</th>
                         {/* <th>Department</th> */}
                         <th>Status</th>
@@ -935,8 +935,117 @@ function ManagerPanel({ user, view = 'branch' }) {
                       {filteredTickets?.map((ticket, index) => {
                         const creator = mockUsers.find(u => u.id === ticket.createdBy);
                         return (
+                          ticket?.status === 'in-progress' &&
                           <tr key={index + 1}>
-                            <td>#{index + 1}</td>
+                            {/* <td>#{index + 1}</td> */}
+                            <td>{ticket.subject}</td>
+                            {/* <td>{ticket?.department}</td> */}
+                            <td>
+                              <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
+                                ticket.status === 'in-progress' ? 'badge-primary' :
+                                  'badge-success'
+                                }`}>
+                                {ticket.status === 'in-progress' ? 'In Progress' :
+                                  ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                                ticket.priority === 'medium' ? 'badge-warning' :
+                                  'badge-primary'
+                                }`}>
+                                {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
+                              </span>
+                            </td>
+                            <td>{formatDate(ticket.createdAt)}</td>
+                            <td>
+                              <div className="flex gap-2" style={{ justifyContent: 'center' }}>
+                                {ticket.status !== 'resolved' && (
+                                  <>
+                                    {ticket.status === 'open' && (
+                                      <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                      >
+                                        Start
+                                      </button>
+                                    )}
+                                    {ticket.status === 'in-progress' && (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredTickets?.map((ticket, index) => {
+                        const creator = mockUsers.find(u => u.id === ticket.createdBy);
+                        return (
+                          ticket?.status === 'open' &&
+                          <tr key={index + 1}>
+
+                            <td>{ticket.subject}</td>
+                            {/* <td>{ticket?.department}</td> */}
+                            <td>
+                              <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
+                                ticket.status === 'in-progress' ? 'badge-primary' :
+                                  'badge-success'
+                                }`}>
+                                {ticket.status === 'in-progress' ? 'In Progress' :
+                                  ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                                ticket.priority === 'medium' ? 'badge-warning' :
+                                  'badge-primary'
+                                }`}>
+                                {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
+                              </span>
+                            </td>
+                            <td>{formatDate(ticket.createdAt)}</td>
+                            <td>
+                              <div className="flex gap-2" style={{ justifyContent: 'center' }}>
+                                {ticket.status !== 'resolved' && (
+                                  <>
+                                    {ticket.status === 'open' && (
+                                      <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                      >
+                                        Start
+                                      </button>
+                                    )}
+                                    {ticket.status === 'in-progress' && (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredTickets?.map((ticket, index) => {
+                        const creator = mockUsers.find(u => u.id === ticket.createdBy);
+                        return (
+                          ticket?.status === 'resolved' &&
+                          <tr key={index + 1}>
+
                             <td>{ticket.subject}</td>
                             {/* <td>{ticket?.department}</td> */}
                             <td>
@@ -1232,100 +1341,91 @@ function ManagerPanel({ user, view = 'branch' }) {
           <div className="modal">
             <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="modal-content">
+
+                {/* Header */}
                 <div className="modal-header">
                   <h3 className="modal-title">Ticket #{selectedTicket?._id}</h3>
                   <button className="modal-close" onClick={handleCloseModal}>×</button>
                 </div>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <h4 className="font-bold">{selectedTicket?.subject}</h4>
-                    <div className="flex gap-2 mb-2">
+
+                <div className="modal-body space-y-6">
+
+                  {/* Section 1: Ticket Info */}
+                  <section className="space-y-2 border-b pb-4">
+                    <h4 className="text-lg font-bold">{selectedTicket?.subject}</h4>
+                    <div className="flex gap-3 flex-wrap">
                       <span className={`badge ${selectedTicket?.status === 'open' ? 'badge-warning' :
-                        selectedTicket?.status === 'in-progress' ? 'badge-primary' :
-                          'badge-success'
-                        }`}>
+                        selectedTicket?.status === 'in-progress' ? 'badge-primary' : 'badge-success'}`}>
                         {selectedTicket?.status === 'in-progress' ? 'In Progress' :
                           selectedTicket?.status?.charAt(0).toUpperCase() + selectedTicket?.status?.slice(1)}
                       </span>
                       <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
-                        selectedTicket?.priority === 'medium' ? 'badge-warning' :
-                          'badge-primary'
-                        }`}>
+                        selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`}>
                         {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
                       </span>
+                      <span className="text-sm text-muted">
+                        Created: {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
+                      </span>
                     </div>
-                    <p className="text-sm text-muted">
-                      Created: {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
-                    </p>
-                  </div>
+                  </section>
 
-                  <div className="flex gap-2 mb-2">
-                    <span className=''>
-                      {selectedTicket?.name}
-                    </span>
-                    <span className=''>
-                      {selectedTicket?.mobile}
-                    </span>
-                    <span className=''>
-                      {selectedTicket?.email}
-                    </span>
+                  {/* Section 2: User Info */}
+                  <section className="space-y-2 border-b pb-4">
+                    <h5 className="font-semibold">User Information</h5>
+                    <div className="flex gap-4 flex-wrap text-sm">
+                      <span><strong>Name:</strong> {selectedTicket?.name}</span>
+                      <span><strong>Mobile:</strong> {selectedTicket?.mobile}</span>
+                      {/* <span><strong>Email:</strong> {selectedTicket?.email}</span> */}
+                    </div>
+                  </section>
 
-                  </div>
-                  {
-                    selectedTicket?.department?.map((curElem) => (
-                      <div className="mb-4">
-                        <h5 className="font-bold mb-2">{curElem?.name}</h5>
-                        <p>{curElem?.description}</p>
+                  {/* Section 3: Department Info */}
+                  <section className="space-y-4 border-b pb-4">
+                    <h5 className="font-semibold">Departments</h5>
+                    {selectedTicket?.department?.map((curElem, index) => (
+                      <div key={index}>
+                        <h6 className="font-bold">{curElem?.name}</h6>
+                        <p className="text-sm">{curElem?.description}</p>
                       </div>
-                    ))
-                  }
+                    ))}
+                  </section>
 
-
-                  <div className="mb-4">
-                    <h5 className="font-bold mb-2">Comments ({selectedTicket?.comments?.length})</h5>
+                  {/* Section 4: Comments */}
+                  <section className="space-y-3 border-b pb-4">
+                    <h5 className="font-semibold">Comments ({selectedTicket?.comments?.length})</h5>
                     {selectedTicket?.comments?.length > 0 ? (
-                      <div className="space-y-3">
-                        {selectedTicket?.comments?.map(comment => (
+                      <div className="space-y-2">
+                        {selectedTicket?.comments?.map((comment) => (
                           <div key={comment?.id} className="p-2 bg-gray-100 rounded">
                             <p className="text-sm">{comment?.content}</p>
-                            <p className="text-xs text-muted mt-1">
-                              {formatDate(comment?.createdAt)}
-                            </p>
+                            <p className="text-xs text-muted">{formatDate(comment?.createdAt)}</p>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <p className="text-muted">No comments yet.</p>
                     )}
-                  </div>
+                  </section>
 
-                  <div className="flex gap-2 mb-2">
+                  {/* Section 5: Reassign Ticket */}
+                  <section className="space-y-2">
+                    <h5 className="font-semibold">ReAssign Ticket</h5>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
+                        <option value="" disabled>ReAssign the Ticket</option>
+                        {department?.map((curElem, index) => (
+                          user?.department !== curElem?.name && (
+                            <option key={index} value={curElem?.name}>{curElem?.name}</option>
+                          )
+                        ))}
+                      </select>
+                      <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
+                    </div>
+                  </section>
 
-                    <span >ReAssign to</span>
-                    <select name="" id="" className="form-select" onChange={(e) => setReAssignto(e.target.value)}>
-                      <option value="" disabled selected>ReAssign the Ticket</option>
-                      {
-                        department?.map((curElem) => (
-                          <>
-                            {
-                              user?.department !== curElem?.name &&
-                              <option value={curElem?.name}>{curElem?.name}</option>
-                            }
-                          </>
-                        ))
-                      }
-                    </select>
-                    <button className="btn btn-primary"
-                      onClick={reAssignTicket}
-                    >
-                      ReAssign
-                    </button>
-                  </div>
-
-
-
-                  <div className="form-group">
-                    <label htmlFor="comment" className="form-label">Add Comment</label>
+                  {/* Section 6: Add Comment */}
+                  <section className="space-y-2">
+                    <label htmlFor="comment" className="form-label font-semibold">Add Comment</label>
                     <textarea
                       id="comment"
                       className="form-control"
@@ -1334,26 +1434,21 @@ function ManagerPanel({ user, view = 'branch' }) {
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                     ></textarea>
-                  </div>
+                  </section>
+
                 </div>
 
+                {/* Footer */}
                 <div className="modal-footer">
-                  <button
-                    className="btn btn-outline"
-                    onClick={handleCloseModal}
-                  >
-                    Close
-                  </button>
-                  <button className="btn btn-primary"
-                    onClick={addCommentOnTicket}
-                  >
-                    Add Comment
-                  </button>
+                  <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
+                  <button className="btn btn-primary" onClick={addCommentOnTicket}>Add Comment</button>
                 </div>
+
               </div>
             </div>
           </div>
         </div>
+
       )}
     </div>
   );

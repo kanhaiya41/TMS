@@ -198,8 +198,6 @@
 
 }
 
-
-
 .deptcheckbox p {
   display: flex;
   gap: 12px;
@@ -625,6 +623,7 @@
     max-width: 1140px;
   }
 }
+
 
 /* Toast/Notification Styles */
 .toast-container {

@@ -324,7 +324,7 @@ function UserProfile() {
                   fontSize: '2rem',
                   backgroundColor: 'var(--color-primary)'
                 }}
-                src={user?.profile ? user?.profile : '/img/admin.png'} alt="PF" />
+                src={user?.profile ? user?.profile : '/img/admin.png'} alt="/img/admin.png" />
 
             </div>
 

@@ -417,7 +417,7 @@ function Dashboard() {
             {sidebarExpanded ? <FontAwesomeIcon icon={faTimes} /> : <FontAwesomeIcon icon={faBars} />}
           </button>
           <div className="sidebar-logo">
-            <span className="sidebar-logo-icon"><img src="/favicon.ico" alt="" /></span>
+            <span className="sidebar-logo-icon"><img src="/favicon.ico" alt="LOGO" /></span>
             <span className="sidebar-logo-text">TMS</span>
           </div>
         </div>
@@ -443,7 +443,7 @@ function Dashboard() {
         <div className="sidebar-footer">
           <div className="user-info">
             <img className="user-avatar"
-              src={user?.profile ? user?.profile : '/img/admin.png'} alt='PF'
+              src={user?.profile ? user?.profile : '/img/admin.png'} alt='/img/admin.png'
             />
             <div className="user-details">
               <div className="user-name">{user?.username}</div>
@@ -496,7 +496,7 @@ function Dashboard() {
                 onClick={toggleProfileDropdown}
                 aria-expanded={profileDropdownOpen}
               >
-                <img src={user?.profile ? user?.profile : '/img/admin.png'} alt='profile' className="user-avatar" />
+                <img src={user?.profile ? user?.profile : '/img/admin.png'} alt='/img/admin.png' className="user-avatar" />
                 <span className="hidden-sm">{user?.username}</span>
               </button>
               {profileDropdownOpen && (

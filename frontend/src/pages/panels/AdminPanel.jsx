@@ -47,13 +47,14 @@ function AdminPanel({ view = 'departments' }) {
   const [userRequest, setUserRequest] = useState();
 
   const [stats, setStats] = useState({
-    totalBranches: 0,
+    // totalBranches: 0,
     totalDepartments: 0,
     totalUsers: 0,
     totalTickets: 0,
     openTickets: 0,
     resolvedTickets: 0,
-    pendingPasswordRequests: 0
+    pendingPasswordRequests: 0,
+    forgetPasswordRequests: 0
   });
 
   useEffect(() => {
@@ -64,10 +65,11 @@ function AdminPanel({ view = 'departments' }) {
       totalTickets: tickets?.length,
       openTickets: tickets.filter(t => t.status === 'open').length,
       resolvedTickets: tickets.filter(t => t.status === 'resolved').length,
-      pendingPasswordRequests: userRequest?.filter((req)=>req.status==='pending')?.length
+      pendingPasswordRequests: userRequest?.filter((req) => req.status === 'pending')?.length,
+      forgetPasswordRequests: allRequests?.length
     };
     setStats(stats);
-  }, [allUsers, tickets, passwordRequests, departments]);
+  }, [allUsers, tickets, userRequest,allRequests, departments,managers,teamLeaders]);
 
   const navigate = useNavigate();
 
@@ -760,7 +762,7 @@ function AdminPanel({ view = 'departments' }) {
           </div>
           <div className="card-body">
             <div className="flex flex-col items-center justify-center h-full">
-              <div className="text-5xl font-bold text-primary mb-2">{stats?.pendingPasswordRequests}</div>
+              <div className="text-5xl font-bold text-primary mb-2">{stats?.forgetPasswordRequests}</div>
               <p className="text-muted">Pending requests</p>
               <button className="btn btn-outline mt-4">View All Requests</button>
             </div>
@@ -845,7 +847,7 @@ function AdminPanel({ view = 'departments' }) {
                             <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                               {tl ? (
                                 <div className="flex items-center gap-2">
-                                  <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="" />
+                                  <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   <span>{tl?.name}</span>
                                 </div>
                               ) : <span className="text-muted">Not assigned</span>}
@@ -986,7 +988,7 @@ function AdminPanel({ view = 'departments' }) {
                             <tr key={tl.id}>
                               <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <div className="flex items-center gap-2">
-                                  <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="" />
+                                  <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   {/* <div className="user-avatar">{tl?.profile}</div> */}
                                   <span>{tl?.username}</span>
                                 </div>
@@ -1051,7 +1053,7 @@ function AdminPanel({ view = 'departments' }) {
                             < tr key={m.id}>
                               <td>
                                 <div className="flex items-center gap-2">
-                                  <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="P" />
+                                  <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   {/* <div className="user-avatar">{m?.profile}</div> */}
                                   <span>{m?.username}</span>
                                 </div>
@@ -1115,7 +1117,7 @@ function AdminPanel({ view = 'departments' }) {
                             < tr key={m.id}>
                               <td>
                                 <div className="flex items-center gap-2">
-                                  <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="P" />
+                                  <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   {/* <div className="user-avatar">{m?.profile}</div> */}
                                   <span>{m?.username}</span>
                                 </div>
@@ -1221,7 +1223,123 @@ function AdminPanel({ view = 'departments' }) {
                     return (
                       <>
                         {
+                          ticket?.status === 'in-progress' &&
+                          <tr key={index + 1}>
+                            <td>{ticket?.branch}</td>
+                            <td>
+                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                ticket.status === 'in-progress' ? 'badge-primary' :
+                                  'badge-success'
+                                }`}>
+                                {ticket?.status === 'in-progress' ? 'In Progress' :
+                                  ticket?.status?.charAt(0)?.toUpperCase() + ticket?.status?.slice(1)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                                ticket.priority === 'medium' ? 'badge-warning' :
+                                  'badge-primary'
+                                }`}>
+                                {ticket?.priority?.charAt(0)?.toUpperCase() + ticket?.priority?.slice(1)}
+                              </span>
+                            </td>
+                            <td>{formatDate(ticket?.createdAt)}</td>
+                            <td>{ticket?.subject}</td>
+                            <td>
+                              <div className="flex gap-2">
+                                {/* {ticket.status !== 'resolved' && (
+                                  <>
+                                    {ticket.status === 'open' && (
+                                      <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'in-progress')}
+                                      >
+                                        Start
+                                      </button>
+                                    )}
+                                    {ticket.status === 'in-progress' && (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'resolved')}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                  </>
+                                )} */}
+                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      </>
 
+                    );
+                  })}
+                  {filteredTickets?.map((ticket, index) => {
+
+                    return (
+                      <>
+                        {
+                          ticket?.status === 'open' &&
+                          <tr key={index + 1}>
+                            <td>{ticket?.branch}</td>
+                            <td>
+                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                ticket.status === 'in-progress' ? 'badge-primary' :
+                                  'badge-success'
+                                }`}>
+                                {ticket?.status === 'in-progress' ? 'In Progress' :
+                                  ticket?.status?.charAt(0)?.toUpperCase() + ticket?.status?.slice(1)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                                ticket.priority === 'medium' ? 'badge-warning' :
+                                  'badge-primary'
+                                }`}>
+                                {ticket?.priority?.charAt(0)?.toUpperCase() + ticket?.priority?.slice(1)}
+                              </span>
+                            </td>
+                            <td>{formatDate(ticket?.createdAt)}</td>
+                            <td>{ticket?.subject}</td>
+                            <td>
+                              <div className="flex gap-2">
+                                {/* {ticket.status !== 'resolved' && (
+                                  <>
+                                    {ticket.status === 'open' && (
+                                      <button
+                                        className="btn btn-sm btn-primary"
+                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'in-progress')}
+                                      >
+                                        Start
+                                      </button>
+                                    )}
+                                    {ticket.status === 'in-progress' && (
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'resolved')}
+                                      >
+                                        Resolve
+                                      </button>
+                                    )}
+                                  </>
+                                )} */}
+                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                              </div>
+                            </td>
+                          </tr>
+                        }
+                      </>
+
+                    );
+                  })}
+                  {filteredTickets?.map((ticket, index) => {
+
+                    return (
+                      <>
+                        {
+                          ticket?.status === 'resolved' &&
                           <tr key={index + 1}>
                             <td>{ticket?.branch}</td>
                             <td>
@@ -1354,7 +1472,7 @@ function AdminPanel({ view = 'departments' }) {
                             <td>
 
                               <div className="flex items-center gap-2">
-                                <img src={request?.profile} className='user-avatar' alt="PF" />
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
 
@@ -1444,13 +1562,13 @@ function AdminPanel({ view = 'departments' }) {
                     return (
                       <>
                         {
-                          request.status === 'pending' &&
+                          request.status === 'pending' && request?.designation === 'Manager' &&
                           <tr key={request?.id} >
 
                             <td style={{ display: 'flex', justifyContent: 'center' }}>
 
                               <div className="flex items-center gap-2">
-                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
 
@@ -1502,13 +1620,68 @@ function AdminPanel({ view = 'departments' }) {
                     return (
                       <>
                         {
+                          request.status === 'pending' && (request?.designation === 'Team Leader' || request?.designation === 'Executive') &&
+                          <tr key={request?.id} >
+
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+
+                              <div className="flex items-center gap-2">
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
+                                <span>{request?.username}</span>
+                              </div>
+
+                            </td>
+                            <td>
+                              {request?.designation}
+                            </td>
+                            <td>{request?.department}</td>
+                            <td>{request?.reqto}</td>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                              {/* {request?.status === 'pending' ? ( */}
+                              <div className="flex gap-2">
+                                {
+                                  request?.status === 'pending' ?
+                                    <>
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                      >Accept
+                                      </button>
+                                      <button
+                                        className="btn btn-sm btn-error"
+                                        onClick={() => deleteUpdateRequest(request?._id)}
+                                      >
+                                        Delete
+                                      </button>
+                                    </> :
+                                    'Accepted'
+                                  // <button
+                                  //   className="btn btn-sm btn-error"
+                                  // // onClick={() => deleteUpdateRequest(request?._id)}
+                                  // >
+                                  //   View
+                                  // </button>
+                                }
+                              </div>
+
+                            </td>
+                          </tr>
+                        }
+
+                      </>
+                    );
+                  })}
+                  {userRequest?.map((request, index) => {
+                    return (
+                      <>
+                        {
                           request.status !== 'pending' &&
                           <tr key={request?.id} >
 
                             <td style={{ display: 'flex', justifyContent: 'center' }}>
 
                               <div className="flex items-center gap-2">
-                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
 
