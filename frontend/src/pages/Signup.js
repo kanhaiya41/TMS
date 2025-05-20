@@ -228,8 +228,8 @@ function Signup({ verifySuperAdmin }) {
                     </div>
 
                     <div className="form-group">
-                        <label htmlFor="" className="form-label">Profile Picture</label> <br />
-                        <label htmlFor="profile" className='form-control' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '4%', borderRadius: '12px' }}>{profile ? profile?.name : 'Upload a Profile Picture'}</label>
+                        <label htmlFor="" className="form-label">Profile Picture</label>
+                        <label htmlFor="profile" className='form-control' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '3.5%', borderRadius: '12px' }}>{profile ? profile?.name : 'Upload a Profile Picture'}</label>
                         <input
                             type="file"
                             id="profile"
