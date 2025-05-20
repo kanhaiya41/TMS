@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { faDyalog } from '@fortawesome/free-brands-svg-icons'
 import { faBell, faBuilding, faChartBar, faComment, faMoon, faSun, faUser } from '@fortawesome/free-regular-svg-icons'
-import { faBars, faChartLine, faCodePullRequest, faCommentDots, faGear, faLock, faPersonCircleQuestion, faSignOut, faTicketAlt, faTimes, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
+import { faAdd, faBars, faChartLine, faCodePullRequest, faCog, faCommentDots, faGear, faLock, faPersonCircleQuestion, faPlusSquare, faSignOut, faTicketAlt, faTimes, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 // import { FaTicketAlt, FaUsers, FaUsersCog, FaBuilding, FaLock, FaChartBar, FaBars, FaTimes } from 'react-icons/fa';
 import ExecutivePanel from './panels/ExecutivePanel';
@@ -189,7 +189,7 @@ function Dashboard() {
       const payload = {
         user: user?._id
       }
-      if (text === 'Branches' || text === 'System Overview' || text === 'Overview') {
+      if (text === 'Branches' || text === 'System Overview' || text === 'Overview' || text === 'Ticket Settings') {
         return '';
       }
       else {
@@ -364,6 +364,11 @@ function Dashboard() {
             to: '/dashboard/user-requests',
             icon: <FontAwesomeIcon icon={faPersonCircleQuestion} />,
             text: 'User Requests',
+          },
+          {
+            to: '/dashboard/ticket-settings',
+            icon: <FontAwesomeIcon icon={faCog} />,
+            text: 'Ticket Settings',
           }
         );
         break;
@@ -461,7 +466,7 @@ function Dashboard() {
               user?.designation === 'Executive' ? '' :
                 <button className="sidebar-toggle"
                   // hidden-sm mr-3"
-                  onClick={()=>navigate('/dashboard/overview')}>
+                  onClick={() => navigate('/dashboard/overview')}>
                   <FontAwesomeIcon icon={faTimes} />
                 </button>
             }
@@ -561,6 +566,9 @@ function Dashboard() {
                   user?.designation === 'Manager' ? <ManagerPanel user={user} view="user-requests" /> :
                     <NotFound />
             } />
+            <Route path="/ticket-settings" element={
+              user.designation === 'admin' ? <AdminPanel user={user} view="ticket-settings" /> : <NotFound />
+            } />
 
             {/* Super Admin Routes */}
             <Route path="/branches/*" element={
@@ -570,7 +578,7 @@ function Dashboard() {
               user?.designation === 'superadmin' ? <SuperAdminPanel user={user} view="admins" /> : <NotFound />
             } />
             <Route path="/overview/*" element={
-              user?.designation === 'superadmin' ? <SuperAdminPanel user={user} view="overview" /> : user?.designation === 'admin' ? <AdminPanel user={user} view='overview' /> : user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view='overview' /> :user?.designation === 'Manager' ? <ManagerPanel user={user} view='overview' /> : <NotFound />
+              user?.designation === 'superadmin' ? <SuperAdminPanel user={user} view="overview" /> : user?.designation === 'admin' ? <AdminPanel user={user} view='overview' /> : user?.designation === 'Team Leader' ? <TeamLeaderPanel user={user} view='overview' /> : user?.designation === 'Manager' ? <ManagerPanel user={user} view='overview' /> : <NotFound />
             } />
 
 

@@ -11,10 +11,11 @@ import axios from 'axios';
 import URI from '../../utills';
 import toast from 'react-hot-toast';
 import { } from '@fortawesome/free-brands-svg-icons'
-import { faBell, faBuilding, faChartBar, faEdit, faEye, faMoon, faUser } from '@fortawesome/free-regular-svg-icons'
-import { faBars, faChartLine, faGear, faLock, faSignOut, faTicketAlt, faTimes, faTrash, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
+import { faBell, faBuilding, faChartBar, faCommentDots, faEdit, faEye, faMoon, faUser } from '@fortawesome/free-regular-svg-icons'
+import { faBars, faChartLine, faGear, faLock, faSearch, faSignOut, faTicketAlt, faTimes, faTrash, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useNavigate } from 'react-router-dom';
+import SessionEndWarning from '../../components/SessionEndWarning';
 
 function AdminPanel({ view = 'departments' }) {
 
@@ -45,6 +46,13 @@ function AdminPanel({ view = 'departments' }) {
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [comment, setComment] = useState('');
   const [userRequest, setUserRequest] = useState();
+  const [isCommentOpen, setIsCommentOpen] = useState(false);
+  const [loading, setLoading] = useState();
+  const [loadingC, setLoadingC] = useState();
+  const [loadingP, setLoadingP] = useState();
+  const [loadingCS, setLoadingCS] = useState();
+  const [loadingPS, setLoadingPS] = useState();
+  const [sessionWarning, setSessionWarning] = useState(false);
 
   const [stats, setStats] = useState({
     // totalBranches: 0,
@@ -69,7 +77,7 @@ function AdminPanel({ view = 'departments' }) {
       forgetPasswordRequests: allRequests?.length
     };
     setStats(stats);
-  }, [allUsers, tickets, userRequest,allRequests, departments,managers,teamLeaders]);
+  }, [allUsers, tickets, userRequest, allRequests, departments, managers, teamLeaders]);
 
   const navigate = useNavigate();
 
@@ -208,7 +216,8 @@ function AdminPanel({ view = 'departments' }) {
       const res = await axios.get(`${URI}/executive/getalltickets`, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         const matchedExecutives = res?.data?.data?.filter((ticket) =>
           user?.branches.includes(ticket?.branch)
@@ -216,8 +225,12 @@ function AdminPanel({ view = 'departments' }) {
         setTickets(matchedExecutives);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -263,10 +276,14 @@ function AdminPanel({ view = 'departments' }) {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedTicket(null);
+    setIsCommentOpen(false);
   };
+
+  const [myDept, setMyDept] = useState({});
 
   const handleViewTicket = (ticket) => {
     setSelectedTicket(ticket);
+    setMyDept(ticket?.department?.find((dept) => dept?.name === user?.department || ticket?.issuedby === user?.username));
     setIsModalOpen(true);
   };
 
@@ -278,6 +295,80 @@ function AdminPanel({ view = 'departments' }) {
       day: 'numeric'
     });
   };
+  const formatTime = (timeString) => {
+    const time = new Date(timeString);
+    return time.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatTat = (tat, createdAt) => {
+    const now = Date.now(); // current time in ms
+    const [valueStr, unitRaw] = tat?.toLowerCase()?.split(" ");
+    const value = parseInt(valueStr);
+    const unit = unitRaw.trim();
+
+    let tatInMs = 0;
+
+    if (unit?.startsWith("day")) {
+      tatInMs = value * 24 * 60 * 60 * 1000; // days to ms
+    } else if (unit?.startsWith("week")) {
+      tatInMs = value * 7 * 24 * 60 * 60 * 1000; // weeks to ms
+    } else if (unit?.startsWith("hour")) {
+      tatInMs = value * 60 * 60 * 1000; // hours to ms
+    } else if (unit?.startsWith("minute")) {
+      tatInMs = value * 60 * 1000; // minutes to ms
+    } else {
+      return "Invalid TAT format";
+    }
+
+    const elapsed = now - new Date(createdAt).getTime(); // ms since created
+
+    if (elapsed > tatInMs) {
+      return "TAT Over";
+    } else {
+      const remaining = tatInMs - elapsed;
+      const mins = Math.floor((remaining / 1000 / 60) % 60);
+      const hrs = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+      const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      return `Remaining: ${days > 0 ? `${days}d ` : ''
+        }${hrs > 0 ? `${hrs}h ` : ''
+        }${mins > 0 ? `${mins}m` : ''
+        }`.trim();
+    }
+  };
+
+  const tatBG = (tat, createdAt) => {
+    const now = Date.now(); // current time in ms
+    const [valueStr, unitRaw] = tat?.toLowerCase()?.split(" ");
+    const value = parseInt(valueStr);
+    const unit = unitRaw.trim();
+
+    let tatInMs = 0;
+
+    if (unit?.startsWith("day")) {
+      tatInMs = value * 24 * 60 * 60 * 1000; // days to ms
+    } else if (unit?.startsWith("week")) {
+      tatInMs = value * 7 * 24 * 60 * 60 * 1000; // weeks to ms
+    } else if (unit?.startsWith("hour")) {
+      tatInMs = value * 60 * 60 * 1000; // hours to ms
+    } else if (unit?.startsWith("minute")) {
+      tatInMs = value * 60 * 1000; // minutes to ms
+    } else {
+      return "Invalid TAT format";
+    }
+
+    const elapsed = now - new Date(createdAt).getTime();
+    const percentElapsed = (elapsed / tatInMs) * 100;
+
+    if (percentElapsed >= 100) return "red";
+    if (percentElapsed >= 90) return "orange";
+    if (percentElapsed >= 50) return "#aec81d";
+    return "green";
+
+  }
 
   const handleEditUser = (userId, role) => {
     let userToEdit;
@@ -358,7 +449,6 @@ function AdminPanel({ view = 'departments' }) {
 
     return matchesSearch;
   });
-
 
   //not worked
   const handleUpdateUser = (userData) => {
@@ -509,14 +599,46 @@ function AdminPanel({ view = 'departments' }) {
       const res = await axios.delete(`${URI}/admin/deleteupdaterequest/${id}`, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         getAllRequests();
         toast.success(res?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log("while delete update request");
+    }
+  }
+
+  const deleteUserEditRequest = async (id) => {
+    try {
+      const res = await axios.delete(`${URI}/admin/deleteusereditrequest/${id}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(res => {
+        fetchEditProfileRequest();
+        toast.success(res?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -530,24 +652,34 @@ function AdminPanel({ view = 'departments' }) {
   const addCommentOnTicket = async () => {
     try {
       const ticketId = selectedTicket?._id;
-      const commenter = user?.department || user?.designation;
-      const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res => {
-        fetchAllTickets();
-        handleCloseModal();
-        setComment('');
-        toast.success(res?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
+      const commenter = `${user?.username}(${user?.department && user?.department ? ' - ' : ''}  ${user?.designation})`;
+      if (comment) {
+        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }).then(res => {
+          fetchAllTickets();
+          handleCloseModal();
+          setComment('');
+          toast.success(res?.data?.message);
+        }).catch(err => {
+          // Handle error and show toast
+          if (err.response && err.response.data) {
+            if (err.response.data.notAuthorized) {
+              setSessionWarning(true);
+            } else {
+              toast.error(err.response.data.message || "Something went wrong");
+            }
+          } else {
+            toast.error("Something went wrong");
+          }
+        });
+      }
+      else {
+        toast.error('Please Write Something in Comment Box!');
+      }
     } catch (error) {
       console.log('error while adding comment', error);
     }
@@ -558,14 +690,22 @@ function AdminPanel({ view = 'departments' }) {
       const res = await axios.delete(`${URI}/admin/deleteuser/${userId}`, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         fetchAllUsers();
+        fetchAllManagers();
+        fetchAllTeamLeaders();
+        fetchDepartment();
         toast.success(res?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -580,17 +720,23 @@ function AdminPanel({ view = 'departments' }) {
       const res = await axios.delete(`${URI}/admin/deletedepartment/${itemToDelete?._id}`, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         fetchDepartment();
+        fetchAllTeamLeaders();
         setItemToDelete('');
         setDeleteType('');
         setIsDeleteModalOpen(false);
         toast.success(res?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -602,10 +748,15 @@ function AdminPanel({ view = 'departments' }) {
 
   const statusUpdateforUserRequest = async (requestId, status, email) => {
     try {
+      setLoading({
+        status: true,
+        id: requestId
+      });
       const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(async r => {
 
         const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: email, section: 'profile' },
@@ -620,8 +771,12 @@ function AdminPanel({ view = 'departments' }) {
         toast.success(r?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -629,8 +784,13 @@ function AdminPanel({ view = 'departments' }) {
     } catch (error) {
       console.log('while status update for user request');
     }
+    finally {
+      setLoading({
+        status: false,
+        id: requestId
+      });
+    }
   }
-
 
   // Render different content based on the view
   const renderContent = () => {
@@ -647,10 +807,619 @@ function AdminPanel({ view = 'departments' }) {
         return renderPasswordRequestsView();
       case 'user-requests':
         return renderUserRequestsView();
+      case 'ticket-settings':
+        return renderTicketSetting();
       default:
         return renderDepartmentsView();
     }
   };
+
+
+  // Ticket Settings State
+  const [categories, setCategories] = useState([]);
+  const [ticketSettings, setTicketSettings] = useState({});
+
+  const fetchTicketSettings = async () => {
+    try {
+      const branch = user?.branches[0];
+      const res = await axios.get(`${URI}/admin/getticketsettings/${branch}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        setTicketSettings(r?.data?.ticketSettings);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while fetching Ticket Settings', error);
+    }
+  }
+
+  useEffect(() => {
+    fetchTicketSettings();
+  }, [])
+
+  const [priorities, setPriorities] = useState([
+    { id: 1, name: 'Low', color: '#10B981' },
+    { id: 2, name: 'Medium', color: '#F59E0B' },
+    { id: 3, name: 'High', color: '#EF4444' },
+    { id: 4, name: 'Critical', color: '#7C3AED' }
+  ]);
+
+  const [newCategory, setNewCategory] = useState({ name: '', description: '' });
+  const [newPriority, setNewPriority] = useState({ name: '', color: '' });
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingPriority, setEditingPriority] = useState(null);
+  const [tat, setTat] = useState({
+    day: '',
+    hour: '',
+    mint: ''
+  })
+  const [editingTat, setEditingTat] = useState({
+    day: '',
+    hour: '',
+    mint: ''
+  })
+  const [activeTab, setActiveTab] = useState('categories');
+
+  useEffect(() => {
+    // Get branch info
+    const userBranch = mockBranches.find(b => b.adminId === user?.id);
+    setBranch(userBranch);
+
+    // Get departments in the branch
+    const branchDepartments = mockDepartments.filter(dept =>
+      dept.branchId === userBranch?.id
+    );
+    setDepartments(branchDepartments);
+
+    // Get team leaders in the branch
+    const branchTeamLeaders = mockUsers.filter(u =>
+      u.role === 'teamleader' && branchDepartments.some(dept => dept.name === u.department)
+    );
+    setTeamLeaders(branchTeamLeaders);
+
+    // Get managers in the branch
+    const branchManagers = mockUsers.filter(u =>
+      u.role === 'manager' && branchDepartments.some(dept => dept.name === u.department)
+    );
+    setManagers(branchManagers);
+
+    // Get all tickets in the branch
+    const branchTickets = mockTickets.filter(ticket =>
+      branchDepartments.some(dept => dept.name === ticket.department)
+    );
+    setTickets(branchTickets);
+
+    // Get password requests from team leaders and managers
+    const teamLeaderIds = branchTeamLeaders.map(tl => tl?.id);
+    const managerIds = branchManagers.map(m => m?.id);
+    const branchPasswordRequests = mockPasswordRequests.filter(req =>
+      teamLeaderIds.includes(req.userId) || managerIds.includes(req.userId)
+    );
+    setPasswordRequests(branchPasswordRequests);
+  }, [user?.id]);
+
+  const handleAddCategory = async () => {
+    if (!newCategory.name.trim() || !newCategory.description.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setLoadingC(true);
+      const res = await axios.post(`${URI}/admin/addticketsettings`, { categories: newCategory, adminId: user?._id, branches: user?.branches },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      ).then(r => {
+        fetchTicketSettings();
+        setNewCategory({ name: '', description: '' });
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while add categories', error);
+    }
+    finally {
+      setLoadingC(false);
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!editingCategory || !editingCategory.name.trim() || !editingCategory.description.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setLoadingCS(true);
+      const res = await axios.post(`${URI}/admin/updateticketsettings`, { adminId: user?._id, categories: editingCategory, branches: user?.branches }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchTicketSettings();
+        setEditingCategory(null);
+        toast.success(r.data.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while update category', error);
+    }
+    finally {
+      setLoadingCS(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categories) => {
+    try {
+      const res = await axios.post(`${URI}/admin/deleteticketsettings`, { adminId: ticketSettings?.adminId, categories }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchTicketSettings();
+        toast.success(r.data.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while delete category', error);
+    }
+  };
+
+  const handleAddPriority = async () => {
+    if (!newPriority.name.trim() || !newPriority.color.trim() || (!tat.day && !tat.hour && !tat.mint)) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    const savePriority = {
+      ...newPriority,
+      tat: tat?.day || tat?.hour || tat.mint
+    }
+
+    try {
+      setLoadingP(true);
+      const res = await axios.post(`${URI}/admin/addticketsettings`, { priorities: savePriority, adminId: user?._id, branches: user?.branches, },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      ).then(r => {
+        fetchTicketSettings();
+        setNewPriority({ name: '', color: '' });
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while add categories', error);
+    }
+    finally {
+      setLoadingP(false);
+    }
+  };
+
+  const handleUpdatePriority = async () => {
+    if (!editingPriority || !editingPriority.name.trim() || !editingPriority.color.trim() || (!tat.day && !tat.hour && !tat.mint)) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    const savePriority = {
+      ...editingPriority,
+      tat: editingTat?.day || editingTat?.hour || editingTat.mint
+    }
+    try {
+      setLoadingPS(true);
+      const res = await axios.post(`${URI}/admin/updateticketsettings`, { adminId: user?._id, priorities: savePriority, branches: user?.branches }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchTicketSettings();
+        setEditingPriority(null);
+        toast.success(r.data.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while update category', error);
+    }
+    finally {
+      setLoadingPS(false);
+    }
+  };
+
+  const handleDeletePriority = async (priorities) => {
+    try {
+      const res = await axios.post(`${URI}/admin/deleteticketsettings`, { adminId: ticketSettings?.adminId, priorities }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchTicketSettings();
+        toast.success(r.data.message);
+      }
+
+
+      ).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while delete category', error);
+    }
+  };
+
+  const days = ['1 day', '2 days', '3 days', '4 days', '5 days', '6 days', '1 week', '2 week',];
+  const hours = ['1 hour', '2 hours', '3 hours', '4 hours', '5 hours', '6 hours', '7 hours', '8 hours', '9 hours', '10 hours', '11 hours', '12 hours', '13 hours', '14 hours', '15 hours', '16 hours', '17 hours', '18 hours', '19 hours', '20 hours', '21 hours', '22 hours', '23 hours', '24 hours'];
+
+  const renderTicketSetting = () => (
+    <>
+      <div className="mb-4">
+        <h2 className="text-xl font-bold">Ticket Settings</h2>
+        <p className="text-muted">Manage ticket categories and priorities</p>
+      </div>
+      <div className="grid grid-2 gap-4">
+        {/* Categories Section */}
+        <div className="card">
+          <div className="card-header">
+            <h3>Categories</h3>
+          </div>
+          <div className="card-body">
+            {/* Add New Category Form */}
+            <div className="mb-4 p-3 bg-gray-100 rounded">
+              <h4 className="mb-2 font-medium">Add New Category</h4>
+              <div className="form-group">
+                <input
+                  type="text"
+                  className="form-control mb-2"
+                  placeholder="Category Name"
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                />
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Description"
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                />
+              </div>
+              {
+                loadingC ? <button className="btn btn-primary mt-2">
+                  <img src="/img/loader.png" className='Loader' alt="loader" />
+                </button>
+                  :
+                  <button className="btn btn-primary mt-2" onClick={handleAddCategory}>
+                    Add Category
+                  </button>
+              }
+            </div>
+
+            {/* Categories List */}
+            <div className="space-y-3">
+              {ticketSettings?.categories?.map(category => (
+                <div key={category?._id} className="p-3 border rounded">
+                  {editingCategory?._id === category?._id ? (
+                    <div>
+                      <input
+                        type="text"
+                        className="form-control mb-2"
+                        value={editingCategory?.name}
+                        onChange={(e) => setEditingCategory({
+                          ...editingCategory,
+                          name: e.target.value
+                        })}
+                      />
+                      <input
+                        type="text"
+                        className="form-control mb-2"
+                        value={editingCategory?.description}
+                        onChange={(e) => setEditingCategory({
+                          ...editingCategory,
+                          description: e.target.value
+                        })}
+                      />
+                      <div className="flex gap-2">
+                        {
+                          loadingCS ? <button className="btn btn-sm btn-primary">
+                            <img src="/img/loader.png" className='Loader' alt="loader" />
+                          </button>
+                            :
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={handleUpdateCategory}
+                            >
+                              Save
+                            </button>
+                        }
+                        <button
+                          className="btn btn-sm btn-outline"
+                          onClick={() => setEditingCategory(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h4 className="font-medium">{category?.name}</h4>
+                      <p className="text-sm text-muted">{category?.description}</p>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          className="btn btn-sm btn-outline"
+                          onClick={() => setEditingCategory(category)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-error"
+                          onClick={() => handleDeleteCategory(category._id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Priorities Section */}
+        <div className="card">
+          <div className="card-header">
+            <h3>Priorities</h3>
+          </div>
+          <div className="card-body">
+            {/* Add New Priority Form */}
+            <div className="mb-4 p-3 bg-gray-100 rounded">
+              <h4 className="mb-2 font-medium">Add New Priority</h4>
+              <div className="form-group">
+
+                <input
+                  type="text"
+                  className="form-control mb-2"
+                  placeholder="Priority Name"
+                  value={newPriority.name}
+                  onChange={(e) => setNewPriority({ ...newPriority, name: e.target.value })}
+                />
+                <label htmlFor="status-filter" className="form-label">Turn Around Time</label>
+                <div className="mb-2 d-flex gap-2" style={{ display: 'flex', width: '100%' }}>
+                  {
+                    !tat?.hour && !tat?.mint &&
+                    <select name="" id=""
+                      className="form-control mb-2"
+                      onChange={(e) => setTat({ day: e.target.value })}
+                    >
+                      <option value="" selected disabled>Days</option>
+                      {
+                        days?.map(curElem => (
+                          <option value={curElem}>{curElem}</option>
+                        ))
+                      }
+                    </select>
+                  }
+                  {
+                    !tat?.day && !tat?.mint &&
+                    <select name="" id=""
+                      className="form-control mb-2"
+                      onChange={(e) => setTat({ hour: e.target.value })}
+                    >
+                      <option value="" selected disabled>Hours</option>
+                      {
+                        hours?.map(curElem => (
+                          <option value={curElem}>{curElem}</option>
+                        ))
+                      }
+                    </select>
+                  }
+                  {
+                    !tat?.hour && !tat?.day &&
+                    <select name="" id=""
+                      className="form-control mb-2"
+                      onChange={(e) => setTat({ mint: e.target.value })}
+                    >
+                      <option value="" selected disabled>Minutes</option>
+                      {
+                        Array.from({ length: 60 }, (_, i) => i + 1).map(curElem => (
+                          <option value={`${curElem} minutes`}>{curElem} minutes</option>
+                        ))
+                      }
+                    </select>
+                  }
+                </div>
+                <label htmlFor="color" className="form-label">Select the Color</label>
+                <input
+                  type="color"
+                  className="form-control"
+                  id='color'
+                  value={newPriority.color}
+                  onChange={(e) => setNewPriority({ ...newPriority, color: e.target.value })}
+                />
+              </div>
+              {
+                loadingP ? <button className="btn btn-primary mt-2">
+                  <img src="/img/loader.png" className='Loader' alt="loader" />
+                </button>
+                  :
+                  <button className="btn btn-primary mt-2" onClick={handleAddPriority}>
+                    Add Priority
+                  </button>
+              }
+            </div>
+
+            {/* Priorities List */}
+            <div className="space-y-3">
+              {ticketSettings?.priorities?.map(priority => (
+                <div key={priority?._id} className="p-3 border rounded">
+                  {editingPriority?._id === priority?._id ? (
+                    <div>
+                      <input
+                        type="text"
+                        className="form-control mb-2"
+                        value={editingPriority?.name}
+                        onChange={(e) => setEditingPriority({
+                          ...editingPriority,
+                          name: e.target.value
+                        })}
+                      />
+                      <input
+                        type="color"
+                        className="form-control mb-2"
+                        value={editingPriority?.color}
+                        onChange={(e) => setEditingPriority({
+                          ...editingPriority,
+                          color: e.target.value
+                        })}
+                      />
+                      <div className="flex gap-2">
+                        {
+                          loadingPS ? <button className="btn btn-sm btn-primary">
+                            <img src="/img/loader.png" className='Loader' alt="loader" />
+                          </button>
+                            :
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={handleUpdatePriority}
+                            >
+                              Save
+                            </button>
+                        }
+                        <button
+                          className="btn btn-sm btn-outline"
+                          onClick={() => setEditingPriority(null)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{
+                            backgroundColor: priority?.color,
+                            padding: '5px 10px',
+                            borderRadius: '5px',
+                            color: parseInt(priority?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff'
+                          }}
+                        >
+                          <span className="font-medium">{priority?.name}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded"
+                          style={{
+                            // backgroundColor: priority?.color,
+                            padding: '5px 10px',
+                            borderRadius: '5px',
+                            // color: parseInt(priority?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff'
+                          }}
+                        >
+                          <span className="font-medium">{priority?.tat}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className="btn btn-sm btn-outline"
+                          onClick={() => setEditingPriority(priority)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-error"
+                          onClick={() => handleDeletePriority(priority?._id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 
   const renderOverviewView = () => (
     <>
@@ -756,15 +1525,44 @@ function AdminPanel({ view = 'departments' }) {
           </div>
         </div>
 
-        <div className="card" onClick={() => navigate('/dashboard/password-requests')}>
+        <div className="card">
           <div className="card-header">
-            <h3>Password Requests</h3>
+            <h3>Branch Overview</h3>
           </div>
-          <div className="card-body">
-            <div className="flex flex-col items-center justify-center h-full">
-              <div className="text-5xl font-bold text-primary mb-2">{stats?.forgetPasswordRequests}</div>
-              <p className="text-muted">Pending requests</p>
-              <button className="btn btn-outline mt-4">View All Requests</button>
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Branch</th>
+                    <th>Total Tickets</th>
+                    <th>Open Tickets</th>
+                    <th>Over Tat</th>
+                  </tr>
+                </thead>
+                <tbody onClick={() => navigate('/dashboard/tickets')}>
+                  {user?.branches?.map(dept => {
+                    // const deptTeamLeaders = teamLeaders?.filter(tl => tl?.department === dept?.name);
+                    const overTat = tickets?.filter(ticket => dept === ticket?.branch && ticket?.status !== 'resolved' && ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt) === 'TAT Over');
+                    const deptTotalTickets = tickets?.filter(t =>
+                      dept === t?.branch
+                    );
+                    const deptOpenTickets = tickets?.filter(t =>
+                      dept === t?.branch && t?.status === 'open'
+                    );
+
+                    return (
+                      <tr key={dept?._id}>
+                        <td>{dept}</td>
+                        <td>{deptTotalTickets?.length}</td>
+                        <td>{deptOpenTickets?.length}</td>
+                        <td style={{ color: 'red', fontWeight: 'bold' }}>{overTat?.length}</td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1001,13 +1799,13 @@ function AdminPanel({ view = 'departments' }) {
                                 <div className="flex gap-2">
                                   <button
                                     className="btn btn-sm btn-outline"
-                                    onClick={() => handleEditUser(tl._id, 'Team Leader')}
+                                    onClick={() => handleEditUser(tl?._id, 'Team Leader')}
                                   >
                                     Edit
                                   </button>
                                   <button
                                     className="btn btn-sm btn-error"
-                                    onClick={() => confirmDeleteUser(tl._id)}
+                                    onClick={() => confirmDeleteUser(tl?._id)}
                                   >
                                     Delete
                                   </button>
@@ -1065,13 +1863,13 @@ function AdminPanel({ view = 'departments' }) {
                                 <div className="flex gap-2">
                                   <button
                                     className="btn btn-sm btn-outline"
-                                    onClick={() => handleEditUser(m._id, 'Manager')}
+                                    onClick={() => handleEditUser(m?._id, 'Manager')}
                                   >
                                     Edit
                                   </button>
                                   <button
                                     className="btn btn-sm btn-error"
-                                    onClick={() => confirmDeleteUser(m._id)}
+                                    onClick={() => confirmDeleteUser(m?._id)}
                                   >
                                     Delete
                                   </button>
@@ -1211,185 +2009,214 @@ function AdminPanel({ view = 'departments' }) {
                     <th>Branch</th>
                     <th>Status</th>
                     <th>Priority</th>
-                    <th>Date</th>
-
+                    <th>T.A.T.</th>
                     <th>Subject</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTickets?.map((ticket, index) => {
-
                     return (
-                      <>
-                        {
-                          ticket?.status === 'in-progress' &&
-                          <tr key={index + 1}>
-                            <td>{ticket?.branch}</td>
-                            <td>
-                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                                ticket.status === 'in-progress' ? 'badge-primary' :
-                                  'badge-success'
-                                }`}>
-                                {ticket?.status === 'in-progress' ? 'In Progress' :
-                                  ticket?.status?.charAt(0)?.toUpperCase() + ticket?.status?.slice(1)}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
-                                ticket.priority === 'medium' ? 'badge-warning' :
-                                  'badge-primary'
-                                }`}>
-                                {ticket?.priority?.charAt(0)?.toUpperCase() + ticket?.priority?.slice(1)}
-                              </span>
-                            </td>
-                            <td>{formatDate(ticket?.createdAt)}</td>
-                            <td>{ticket?.subject}</td>
-                            <td>
-                              <div className="flex gap-2">
-                                {/* {ticket.status !== 'resolved' && (
-                                  <>
-                                    {ticket.status === 'open' && (
-                                      <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'in-progress')}
-                                      >
-                                        Start
-                                      </button>
-                                    )}
-                                    {ticket.status === 'in-progress' && (
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'resolved')}
-                                      >
-                                        Resolve
-                                      </button>
-                                    )}
-                                  </>
-                                )} */}
-                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
-                              </div>
-                            </td>
-                          </tr>
-                        }
-                      </>
+                      // tickets?.filter(ticket => ticket?.department?.find(d => d.name === dept.name) &&
+                      ticket?.status !== 'resolved'
+                      && ticket?.tat
+                      && tatBG(ticket?.tat, ticket?.createdAt) === 'red' &&
+                      // ticket?.status === 'in-progress' &&
+                      <tr key={index + 1}>
+                        {/* <td>#{index + 1}</td> */}
+                        <td>{ticket?.branch}</td>
+                        {/* <td>{ticket?.department}</td> */}
+                        <td>
+                          <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
+                            ticket.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`}>
+                            {ticket.status === 'in-progress' ? 'In Progress' :
+                              ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                            ticket.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}
+                            style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
 
+                          >
+                            {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
+                            {ticket?.tat}
+                          </span>
+                        </td>
+                        <td>
+                          {ticket?.subject}
+                        </td>
+                        <td>
+                          <div className="flex gap-2" style={{ justifyContent: 'center' }}>
+                            {/* {ticket.status !== 'resolved' && (
+                              <>
+                                {ticket.status === 'open' && (
+                                  <button
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                  >
+                                    Start
+                                  </button>
+                                )}
+                                {ticket.status === 'in-progress' && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                  >
+                                    Resolve
+                                  </button>
+                                )}
+                              </>
+                            )} */}
+                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })}
                   {filteredTickets?.map((ticket, index) => {
-
                     return (
-                      <>
-                        {
-                          ticket?.status === 'open' &&
-                          <tr key={index + 1}>
-                            <td>{ticket?.branch}</td>
-                            <td>
-                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                                ticket.status === 'in-progress' ? 'badge-primary' :
-                                  'badge-success'
-                                }`}>
-                                {ticket?.status === 'in-progress' ? 'In Progress' :
-                                  ticket?.status?.charAt(0)?.toUpperCase() + ticket?.status?.slice(1)}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
-                                ticket.priority === 'medium' ? 'badge-warning' :
-                                  'badge-primary'
-                                }`}>
-                                {ticket?.priority?.charAt(0)?.toUpperCase() + ticket?.priority?.slice(1)}
-                              </span>
-                            </td>
-                            <td>{formatDate(ticket?.createdAt)}</td>
-                            <td>{ticket?.subject}</td>
-                            <td>
-                              <div className="flex gap-2">
-                                {/* {ticket.status !== 'resolved' && (
-                                  <>
-                                    {ticket.status === 'open' && (
-                                      <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'in-progress')}
-                                      >
-                                        Start
-                                      </button>
-                                    )}
-                                    {ticket.status === 'in-progress' && (
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'resolved')}
-                                      >
-                                        Resolve
-                                      </button>
-                                    )}
-                                  </>
-                                )} */}
-                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
-                              </div>
-                            </td>
-                          </tr>
-                        }
-                      </>
+                      // ticket?.status === 'open' &&
+                      ticket?.status !== 'resolved'
+                      && ticket?.tat
+                      && tatBG(ticket?.tat, ticket?.createdAt) !== 'red' &&
+                      <tr key={index + 1}>
 
+                        <td>{ticket?.branch}</td>
+                        {/* <td>{ticket?.department}</td> */}
+                        <td>
+                          <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
+                            ticket.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`}>
+                            {ticket.status === 'in-progress' ? 'In Progress' :
+                              ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                            ticket.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}
+                            style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+
+                          >
+                            {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
+                            {ticket?.tat}
+                          </span>
+                        </td>
+                        <td>
+                          {ticket?.subject}
+                        </td>
+                        <td>
+                          <div className="flex gap-2" style={{ justifyContent: 'center' }}>
+                            {/* {ticket.status !== 'resolved' && (
+                              <>
+                                {ticket.status === 'open' && (
+                                  <button
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                  >
+                                    Start
+                                  </button>
+                                )}
+                                {ticket.status === 'in-progress' && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                  >
+                                    Resolve
+                                  </button>
+                                )}
+                              </>
+                            )} */}
+                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })}
                   {filteredTickets?.map((ticket, index) => {
-
                     return (
-                      <>
-                        {
-                          ticket?.status === 'resolved' &&
-                          <tr key={index + 1}>
-                            <td>{ticket?.branch}</td>
-                            <td>
-                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                                ticket.status === 'in-progress' ? 'badge-primary' :
-                                  'badge-success'
-                                }`}>
-                                {ticket?.status === 'in-progress' ? 'In Progress' :
-                                  ticket?.status?.charAt(0)?.toUpperCase() + ticket?.status?.slice(1)}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
-                                ticket.priority === 'medium' ? 'badge-warning' :
-                                  'badge-primary'
-                                }`}>
-                                {ticket?.priority?.charAt(0)?.toUpperCase() + ticket?.priority?.slice(1)}
-                              </span>
-                            </td>
-                            <td>{formatDate(ticket?.createdAt)}</td>
-                            <td>{ticket?.subject}</td>
-                            <td>
-                              <div className="flex gap-2">
-                                {/* {ticket.status !== 'resolved' && (
-                                  <>
-                                    {ticket.status === 'open' && (
-                                      <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'in-progress')}
-                                      >
-                                        Start
-                                      </button>
-                                    )}
-                                    {ticket.status === 'in-progress' && (
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => handleUpdateTicketStatus(ticket.id, 'resolved')}
-                                      >
-                                        Resolve
-                                      </button>
-                                    )}
-                                  </>
-                                )} */}
-                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
-                              </div>
-                            </td>
-                          </tr>
-                        }
-                      </>
+                      ticket?.status === 'resolved' &&
+                      <tr key={index + 1}>
 
+                        <td>{ticket?.branch}</td>
+                        {/* <td>{ticket?.department}</td> */}
+                        <td>
+                          <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
+                            ticket.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`}>
+                            {ticket.status === 'in-progress' ? 'In Progress' :
+                              ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                            ticket.priority === 'medium' ? 'badge-warning' :
+                              'badge-primary'
+                            }`}
+                            style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                          >
+                            {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
+                              'badge-success'
+                            }`} >
+                            {ticket?.tat}
+                          </span>
+                        </td>
+                        <td>
+                          {ticket?.subject}
+                        </td>
+                        <td>
+                          <div className="flex gap-2" style={{ justifyContent: 'center' }}>
+                            {/* {ticket.status !== 'resolved' && (
+                              <>
+                                {ticket.status === 'open' && (
+                                  <button
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
+                                  >
+                                    Start
+                                  </button>
+                                )}
+                                {ticket.status === 'in-progress' && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
+                                  >
+                                    Resolve
+                                  </button>
+                                )}
+                              </>
+                            )} */}
+                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })}
                 </tbody>
@@ -1549,7 +2376,6 @@ function AdminPanel({ view = 'departments' }) {
               <table className="table">
                 <thead>
                   <tr>
-
                     <th>User</th>
                     <th>Role</th>
                     <th>Department</th>
@@ -1585,27 +2411,35 @@ function AdminPanel({ view = 'departments' }) {
                               {/* {request?.status === 'pending' ? ( */}
                               <div className="flex gap-2">
                                 {
-                                  request?.status === 'pending' ?
+                                  loading?.id === request?._id && loading?.status ? <button className={`btn btn-${request?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
                                     <>
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
-                                      >Accept
-                                      </button>
-                                      <button
-                                        className="btn btn-sm btn-error"
-                                        onClick={() => deleteUpdateRequest(request?._id)}
-                                      >
-                                        Delete
-                                      </button>
-                                    </> :
-                                    'Accepted'
-                                  // <button
-                                  //   className="btn btn-sm btn-error"
-                                  // // onClick={() => deleteUpdateRequest(request?._id)}
-                                  // >
-                                  //   View
-                                  // </button>
+                                      {
+                                        request?.status === 'pending' ?
+                                          <>
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                            >Accept
+                                            </button>
+                                            <button
+                                              className="btn btn-sm btn-error"
+                                              onClick={() => deleteUserEditRequest(request?._id)}
+                                            >
+                                              Delete
+                                            </button>
+                                          </> :
+                                          'Accepted'
+                                        // <button
+                                        //   className="btn btn-sm btn-error"
+                                        // // onClick={() => deleteUpdateRequest(request?._id)}
+                                        // >
+                                        //   View
+                                        // </button>
+                                      }
+                                    </>
                                 }
                               </div>
 
@@ -1640,34 +2474,41 @@ function AdminPanel({ view = 'departments' }) {
                               {/* {request?.status === 'pending' ? ( */}
                               <div className="flex gap-2">
                                 {
-                                  request?.status === 'pending' ?
+                                  loading?.id === request?._id && loading?.status ? <button className={`btn btn-${request?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
                                     <>
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
-                                      >Accept
-                                      </button>
-                                      <button
-                                        className="btn btn-sm btn-error"
-                                        onClick={() => deleteUpdateRequest(request?._id)}
-                                      >
-                                        Delete
-                                      </button>
-                                    </> :
-                                    'Accepted'
-                                  // <button
-                                  //   className="btn btn-sm btn-error"
-                                  // // onClick={() => deleteUpdateRequest(request?._id)}
-                                  // >
-                                  //   View
-                                  // </button>
+                                      {
+                                        request?.status === 'pending' ?
+                                          <>
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                            >Accept
+                                            </button>
+                                            <button
+                                              className="btn btn-sm btn-error"
+                                              onClick={() => deleteUserEditRequest(request?._id)}
+                                            >
+                                              Delete
+                                            </button>
+                                          </> :
+                                          'Accepted'
+                                        // <button
+                                        //   className="btn btn-sm btn-error"
+                                        // // onClick={() => deleteUpdateRequest(request?._id)}
+                                        // >
+                                        //   View
+                                        // </button>
+                                      }
+                                    </>
                                 }
                               </div>
 
                             </td>
                           </tr>
                         }
-
                       </>
                     );
                   })}
@@ -1695,27 +2536,35 @@ function AdminPanel({ view = 'departments' }) {
                               {/* {request?.status === 'pending' ? ( */}
                               <div className="flex gap-2">
                                 {
-                                  request?.status === 'pending' ?
+                                  loading?.id === request?._id && loading?.status ? <button className={`btn btn-${request?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
                                     <>
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
-                                      >Accept
-                                      </button>
-                                      <button
-                                        className="btn btn-sm btn-error"
-                                        onClick={() => deleteUpdateRequest(request?._id)}
-                                      >
-                                        Delete
-                                      </button>
-                                    </> :
-                                    'Accepted'
-                                  // <button
-                                  //   className="btn btn-sm btn-error"
-                                  // // onClick={() => deleteUpdateRequest(request?._id)}
-                                  // >
-                                  //   View
-                                  // </button>
+                                      {
+                                        request?.status === 'pending' ?
+                                          <>
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                            >Accept
+                                            </button>
+                                            <button
+                                              className="btn btn-sm btn-error"
+                                              onClick={() => deleteUserEditRequest(request?._id)}
+                                            >
+                                              Delete
+                                            </button>
+                                          </> :
+                                          'Accepted'
+                                        // <button
+                                        //   className="btn btn-sm btn-error"
+                                        // // onClick={() => deleteUpdateRequest(request?._id)}
+                                        // >
+                                        //   View
+                                        // </button>
+                                      }
+                                    </>
                                 }
                               </div>
 
@@ -1742,6 +2591,8 @@ function AdminPanel({ view = 'departments' }) {
 
   return (
     <div className="animate-fade">
+      {sessionWarning && <SessionEndWarning setSessionWarning={setSessionWarning} />}
+
       {renderContent()}
 
       {/* Delete Confirmation Modal */}
@@ -1793,59 +2644,134 @@ function AdminPanel({ view = 'departments' }) {
           <div className="modal">
             <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="modal-content">
+
+                {/* Header */}
                 <div className="modal-header">
                   <h3 className="modal-title">Ticket #{selectedTicket?._id}</h3>
                   <button className="modal-close" onClick={handleCloseModal}>×</button>
                 </div>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <h4 className="font-bold">{selectedTicket?.subject}</h4>
-                    <div className="flex gap-2 mb-2">
-                      <span className={`badge ${selectedTicket?.status === 'open' ? 'badge-warning' :
-                        selectedTicket?.status === 'in-progress' ? 'badge-primary' :
-                          'badge-success'
-                        }`}>
-                        {selectedTicket?.status === 'in-progress' ? 'In Progress' :
-                          selectedTicket?.status?.charAt(0).toUpperCase() + selectedTicket?.status?.slice(1)}
-                      </span>
-                      <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
-                        selectedTicket?.priority === 'medium' ? 'badge-warning' :
-                          'badge-primary'
-                        }`}>
-                        {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
+
+                <div className="modal-body space-y-6">
+
+                  {/* Section 1: Ticket Info */}
+                  <section className="space-y-2 border-b pb-4">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <span style={{ float: 'left', display: 'flex', gap: '5px' }}>issuedby: <span style={{ fontWeight: 'bold' }} >{selectedTicket?.issuedby === user?.username ? 'You' : selectedTicket?.issuedby}</span > </span>
+                      <h4 style={{ display: 'flex', justifyContent: 'center', textAlign: 'center' }} className="text-lg font-bold">{selectedTicket?.category} -  <h5> {selectedTicket?.subject}</h5> </h4>
+                    </div>
+                    <div className="flex gap-3 flex-wrap" style={{ justifyContent: 'space-between' }}>
+                      <div className="flex gap-3 flex-wrap">
+                        <span className={`badge ${selectedTicket?.status === 'open' ? 'badge-warning' :
+                          selectedTicket?.status === 'in-progress' ? 'badge-primary' : 'badge-success'}`}>
+                          {selectedTicket?.status === 'in-progress' ? 'In Progress' :
+                            selectedTicket?.status?.charAt(0).toUpperCase() + selectedTicket?.status?.slice(1)}
+                        </span>
+                        <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
+                          selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`}
+                          style={{ background: ticketSettings?.priorities?.find(p => p?.name === selectedTicket?.priority)?.color }}
+                        >
+                          {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
+                        </span>
+                        <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
+                          selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`} style={{ background: selectedTicket?.tat && tatBG(selectedTicket?.tat, selectedTicket?.createdAt) }}>
+                          {selectedTicket?.tat && formatTat(selectedTicket?.tat, selectedTicket?.createdAt)}
+                        </span>
+                      </div>
+                      <span className="text-sm text-muted">
+                        {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
                       </span>
                     </div>
-                    <p className="text-sm text-muted">
-                      Created: {formatDate(selectedTicket?.createdAt)}
-                    </p>
-                  </div>
+                  </section> <br />
+                  <hr />
+                  {/* Section 2: User Info */}
+                  <section className="space-y-2 border-b pb-4">
+                    <h5 className="font-semibold">User Information</h5>
+                    <div className="flex gap-4 flex-wrap text-sm" style={{ justifyContent: 'center' }}>
+                      <span><strong>Name:</strong> {selectedTicket?.name}</span>
+                      <span><strong>Mobile:</strong> {selectedTicket?.mobile}</span>
+                      {/* <span><strong>Email:</strong> {selectedTicket?.email}</span> */}
+                    </div>
+                  </section><br />
+                  <hr />
 
-                  <div className="mb-4">
-                    <h5 className="font-bold mb-2">Description</h5>
-                    <p>{selectedTicket?.description}</p>
-                  </div>
+                  {/* Section 3: Department Info */}
+                  <section className="space-y-4 border-b pb-4">
+                    <h5 className="font-semibold">Departments</h5>
+                    {selectedTicket?.department?.map((curElem, index) => (
+                      // (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
+                      <>
+                        <div key={index} style={{ display: 'flex', gap: '5px' }}>
+                          <span className="font-bold">{curElem?.name}{curElem?.description && ':'}</span>
+                          {
+                            curElem?.users && curElem?.users?.length > 0 ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+                              {curElem?.users?.map(curElem => (
+                                <span>{curElem}</span>
+                              ))}
+                            </div> :
+                              <span>No Specific Member Involved.</span>
+                          }
+                        </div>
+                        <p className="text-sm" style={{ wordBreak: 'break-word' }} >{curElem?.description}</p>
+                      </>
+                    ))}
+                  </section>
+                  <hr />
+                  {/* Section 4: Comments */}
+                  {
+                    selectedTicket?.comments?.length > 0 &&
+                    <button
+                      className="notification-btn"
+                      aria-label="Notifications"
+                      style={{ float: 'right' }} onClick={() => setIsCommentOpen(!isCommentOpen)}
+                    >
+                      <FontAwesomeIcon icon={faCommentDots} />
+                      {selectedTicket?.comments?.length > 0 && (
+                        <span className="notification-badge">{selectedTicket?.comments?.length}</span>
+                      )}
+                    </button>
+                  }
 
-                  <div className="mb-4">
-                    <h5 className="font-bold mb-2">Comments ({selectedTicket?.comments?.length})</h5>
-                    {selectedTicket?.comments?.length > 0 ? (
-                      <div className="space-y-3">
-                        {selectedTicket?.comments?.map(comment => (
-                          <div key={comment?.id} className="p-2 bg-gray-100 rounded">
-                            <p className="text-sm">{comment?.content}</p>
-                            <p className="text-sm">{comment?.commenter}</p>
-                            <p className="text-xs text-muted mt-1">
-                              {formatDate(comment?.createdAt)}
-                            </p>
+                  {
+                    isCommentOpen &&
+                    <>
+                      <section className="space-y-3 border-b pb-4">
+                        <h5 className="font-semibold">Comments ({selectedTicket?.comments?.length})</h5>
+                        {selectedTicket?.comments?.length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedTicket?.comments?.map((comment) => (
+                              <div key={comment?.id} className="p-2 bg-gray-100 rounded">
+                                <p className="text-sm" style={{ wordBreak: 'break-word' }} >{comment?.content}</p>
+                                <p className="text-xs text-muted">{comment?.commenter} - {formatDate(comment?.createdAt)}</p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted">No comments yet.</p>
-                    )}
-                  </div>
+                        ) : (
+                          <p className="text-muted">No comments yet.</p>
+                        )}
+                      </section> <hr />
+                    </>
+                  }
 
-                  <div className="form-group">
-                    <label htmlFor="comment" className="form-label">Add Comment</label>
+                  {/* Section 5: Reassign Ticket */}
+                  {/* <section className="space-y-2">
+                    <h5 className="font-semibold">ReAssign Ticket</h5>
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
+                        <option value="" disabled>ReAssign the Ticket</option>
+                        {department?.map((curElem, index) => (
+                          user?.department !== curElem?.name && (
+                            <option key={index} value={curElem?.name}>{curElem?.name}</option>
+                          )
+                        ))}
+                      </select>
+                      <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
+                    </div>
+                  </section> */}
+
+                  {/* Section 6: Add Comment */}
+
+                  <section className="space-y-2">
+                    <label htmlFor="comment" className="form-label font-semibold">Add Comment</label>
                     <textarea
                       id="comment"
                       className="form-control"
@@ -1854,21 +2780,16 @@ function AdminPanel({ view = 'departments' }) {
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
                     ></textarea>
-                  </div>
+                  </section>
+
                 </div>
+
+                {/* Footer */}
                 <div className="modal-footer">
-                  <button
-                    className="btn btn-outline"
-                    onClick={handleCloseModal}
-                  >
-                    Close
-                  </button>
-                  <button className="btn btn-primary"
-                    onClick={addCommentOnTicket}
-                  >
-                    Add Comment
-                  </button>
+                  <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
+                  <button className="btn btn-primary" onClick={addCommentOnTicket}>Add Comment</button>
                 </div>
+
               </div>
             </div>
           </div>

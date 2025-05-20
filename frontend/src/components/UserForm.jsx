@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import axios from 'axios';
 import URI from '../utills';
 import toast from 'react-hot-toast';
+import SessionEndWarning from './SessionEndWarning';
 
 function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, passReq, deleteUpdateRequest }) {
 
@@ -20,6 +21,7 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
     branch: initialData?.branch || user?.branch || '',
     name: initialData?.name || ''
   });
+  const [sessionWarning, setSessionWarning] = useState(false);
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -240,7 +242,8 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
           const res = await axios.post(`${URI}/superadmin/makeadmin`, formdata, {
             headers: {
               'Content-Type': 'multipart/form-data'
-            }
+            },
+            withCredentials: true
           }).then(async (res) => {
             fetchAllUsers();
             onCancel();
@@ -258,8 +261,12 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
             toast.success(res?.data?.message);
           }).catch(err => {
             // Handle error and show toast
-            if (err.response && err.response.data && err.response.data.message) {
-              toast.error(err.response.data.message); // For 400, 401, etc.
+            if (err.response && err.response.data) {
+              if (err.response.data.notAuthorized) {
+                setSessionWarning(true);
+              } else {
+                toast.error(err.response.data.message || "Something went wrong");
+              }
             } else {
               toast.error("Something went wrong");
             }
@@ -272,7 +279,8 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
           const res = await axios.post(`${URI}/admin/adduser`, formdata, {
             headers: {
               'Content-Type': 'multipart/form-data'
-            }
+            },
+            withCredentials: true
           }).then(async res => {
             if (designation === 'Executive' || designation === 'Team Leader') {
               const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch || user?.branch, section: 'users', designation: designation, department: formData?.department },
@@ -299,8 +307,12 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
             toast.success(res?.data?.message);
           }).catch(err => {
             // Handle error and show toast
-            if (err.response && err.response.data && err.response.data.message) {
-              toast.error(err.response.data.message); // For 400, 401, etc.
+            if (err.response && err.response.data) {
+              if (err.response.data.notAuthorized) {
+                setSessionWarning(true);
+              } else {
+                toast.error(err.response.data.message || "Something went wrong");
+              }
             } else {
               toast.error("Something went wrong");
             }
@@ -343,7 +355,8 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
         const res = await axios.post(`${URI}/admin/updateuser`, formdata, {
           headers: {
             'Content-Type': 'multipart/form-data'
-          }
+          },
+          withCredentials: true
         }).then(async res => {
           if (designation === 'Executive' || designation === 'Team Leader') {
             const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: formData?.branch || user?.branch, section: 'users', designation: designation, department: formData?.department },
@@ -375,8 +388,12 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
           }
         }).catch(err => {
           // Handle error and show toast
-          if (err.response && err.response.data && err.response.data.message) {
-            toast.error(err.response.data.message); // For 400, 401, etc.
+          if (err.response && err.response.data) {
+            if (err.response.data.notAuthorized) {
+              setSessionWarning(true);
+            } else {
+              toast.error(err.response.data.message || "Something went wrong");
+            }
           } else {
             toast.error("Something went wrong");
           }
@@ -391,217 +408,224 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
   }
 
   return (
-    <form className='form'>
-      <div className="form-group">
-        <label htmlFor="username" className="form-label">Username</label>
-        <input
-          type="text"
-          id="username"
-          name="username"
-          className={`form-control ${errors.name ? 'border-error' : ''}`}
-          value={formData?.username}
-          onChange={handleChange}
-          placeholder="Enter Username"
-        />
-        {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="email" className="form-label">Email Address</label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          className={`form-control ${errors.email ? 'border-error' : ''}`}
-          value={formData?.email}
-          onChange={handleChange}
-          placeholder="Enter email address"
-        />
-        {errors?.email && <div className="text-error text-sm mt-1">{errors?.email}</div>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="name" className="form-label">Enter Full Name</label>
-        <input
-          type="text"
-          id="name"
-          name="name"
-          className={`form-control ${errors.name ? 'border-error' : ''}`}
-          value={formData?.name}
-          onChange={handleChange}
-          placeholder="Enter Full Name"
-        />
-        {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="mobile" className="form-label">Mobile Number</label>
-        <input
-          type="number"
-          id="mobile"
-          name="mobile"
-          className={`form-control ${errors?.mobile ? 'border-error' : ''}`}
-          value={formData?.mobile}
-          onChange={handleChange}
-          placeholder="Enter mobile number"
-        />
-        {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="password" className="form-label">Password</label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          className={`form-control ${errors?.name ? 'border-error' : ''}`}
-          value={formData?.password}
-          onChange={handleChange}
-          placeholder="Enter Password"
-        />
-        {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="cpassword" className="form-label">Confirm Password</label>
-        <input
-          type="password"
-          id="cpassword"
-          name="cpassword"
-          className={`form-control ${errors.password ? 'border-error' : ''}`}
-          value={formData?.cpassword}
-          onChange={handleChange}
-          placeholder="Confirm Password"
-        />
-        {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
-      </div>
-
-      {
-        user?.designation === 'superadmin' &&
+    <>
+      {sessionWarning && <SessionEndWarning setSessionWarning={setSessionWarning} />}
+      <form className='form'>
         <div className="form-group">
-          <label htmlFor="branch" className="form-label">Branch</label>
-          <div className='deptcheckbox'>
-            {
-              branches?.map((curElem) => (
-                <>
-                  {
-                    !curElem?.admin &&
-                    <p>{curElem?.name} <input type="checkbox" value={curElem?.name} onChange={handleCheckboxChange} name='department' /></p>
-                  }
-                </>
-              ))
-            }
-          </div>
-
-          {errors?.branch && <div className="text-error text-sm mt-1">{errors?.branch}</div>}
+          <label htmlFor="username" className="form-label">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            className={`form-control ${errors.name ? 'border-error' : ''}`}
+            value={formData?.username}
+            onChange={handleChange}
+            placeholder="Enter Username"
+          />
+          {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
         </div>
-      }
 
-      <div className="form-group">
-        <label htmlFor="address" className="form-label">Enter Address</label>
-        <input
-          type="text"
-          id="address"
-          name="address"
-          className={`form-control ${errors?.email ? 'border-error' : ''}`}
-          value={formData?.address}
-          onChange={handleChange}
-          placeholder="Enter address"
-        />
-        {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
-      </div>
-
-      <div className="form-group">
-        <label htmlFor="" className="form-label">Profile Picture</label>
-        <label htmlFor="profile" className='form-label' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '2%', borderRadius: '12px' }}>{profile ? profile?.name : 'Upload a Profile Picture'}</label>
-        <input
-          type="file"
-          id="profile"
-          name="profile"
-          style={{ display: 'none' }}
-          className=''
-          // value={profile}
-          onChange={(e) => setProfile(e.target.files[0])}
-          placeholder="Enter full name"
-        />
-        {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
-      </div>
-
-      {
-        user?.designation === 'admin' &&
         <div className="form-group">
-          <label htmlFor="branch" className="form-label">Branch</label>
-          <select onChange={handleChange} name="branch" id="branch" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
-            <option value="" disabled selected>--Branch--</option>
-            {
-              user?.branches?.map((curElem) => {
-                const isBranchAssigned = managers.some((man) => man.branch === curElem);
+          <label htmlFor="email" className="form-label">Email Address</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            className={`form-control ${errors.email ? 'border-error' : ''}`}
+            value={formData?.email}
+            onChange={handleChange}
+            placeholder="Enter email address"
+          />
+          {errors?.email && <div className="text-error text-sm mt-1">{errors?.email}</div>}
+        </div>
 
-                if (!isBranchAssigned || designation !== 'Manager') {
-                  return (
-                    <option key={curElem} value={curElem}>
-                      {curElem}
-                    </option>
-                  );
-                }
-                return null;
-              })
-            }
+        <div className="form-group">
+          <label htmlFor="name" className="form-label">Enter Full Name</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            className={`form-control ${errors.name ? 'border-error' : ''}`}
+            value={formData?.name}
+            onChange={handleChange}
+            placeholder="Enter Full Name"
+          />
+          {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
+        </div>
 
-          </select>
+        <div className="form-group">
+          <label htmlFor="mobile" className="form-label">Mobile Number</label>
+          <input
+            type="number"
+            id="mobile"
+            name="mobile"
+            className={`form-control ${errors?.mobile ? 'border-error' : ''}`}
+            value={formData?.mobile}
+            onChange={handleChange}
+            placeholder="Enter mobile number"
+          />
+          {errors?.name && <div className="text-error text-sm mt-1">{errors?.name}</div>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="password" className="form-label">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            className={`form-control ${errors?.name ? 'border-error' : ''}`}
+            value={formData?.password}
+            onChange={handleChange}
+            placeholder="Enter Password"
+          />
+          {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="cpassword" className="form-label">Confirm Password</label>
+          <input
+            type="password"
+            id="cpassword"
+            name="cpassword"
+            className={`form-control ${errors.password ? 'border-error' : ''}`}
+            value={formData?.cpassword}
+            onChange={handleChange}
+            placeholder="Confirm Password"
+          />
           {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
         </div>
-      }
-      {
-        user?.designation !== 'Team Leader' &&
-        <>
-          {
-            (designation === 'Executive' || designation === 'Team Leader') &&
-            <div className="form-group">
-              <label htmlFor="department" className="form-label">Department</label>
-              <select onChange={handleChange} name="department" id="department" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
-                <option value="" disabled selected>--Department--</option>
-                {
-                  departments?.map((curElem) => (
-                    curElem?.branch === formData?.branch &&
-                      (designation === 'Executive' || (initialData || !curElem?.teamleader)) ? (
-                      <option key={curElem?.name} value={curElem?.name}>
-                        {curElem?.name}
-                      </option>
-                    ) : null
-                  ))
-                }
-              </select>
-              {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
-            </div>
-          }
-        </>
-      }
 
-
-      <div className="flex gap-2 justify-end mt-4">
-        <button
-          type="button"
-          className="btn btn-outline"
-          onClick={onCancel}
-        >
-          Cancel
-        </button>
         {
-          loading ? <button className="btn btn-primary">
-            <img src="/img/loader.png" className='Loader' alt="loader" />
-          </button>
-            :
-            <button
-              type="submit"
-              className="btn btn-primary"
-              onClick={initialData ? updateUser : makeUser}
-            >
-              {initialData ? 'Update Now' : 'Create Now'}
-            </button>
+          user?.designation === 'superadmin' &&
+          <div className="form-group">
+            <label htmlFor="branch" className="form-label">Branch</label>
+            {
+              (branches && branches.length > 0) ?
+                <div className='deptcheckbox'>
+                  {
+                    branches?.map((curElem) => (
+                      <>
+                        {
+                          (curElem?.admin !== '' || !curElem?.admin) &&
+                          <p>{curElem?.name} <input type="checkbox" value={curElem?.name} onChange={handleCheckboxChange} name='department' /></p>
+                        }
+                      </>
+                    ))
+                  }
+                </div> :
+                'No branches to Assign!'
+            }
+
+            {errors?.branch && <div className="text-error text-sm mt-1">{errors?.branch}</div>}
+          </div>
         }
-      </div>
-    </form>
+
+        <div className="form-group">
+          <label htmlFor="address" className="form-label">Enter Address</label>
+          <input
+            type="text"
+            id="address"
+            name="address"
+            className={`form-control ${errors?.email ? 'border-error' : ''}`}
+            value={formData?.address}
+            onChange={handleChange}
+            placeholder="Enter address"
+          />
+          {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="" className="form-label">Profile Picture</label>
+          <label htmlFor="profile" className='form-label' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '2%', borderRadius: '12px' }}>{profile ? profile?.name : 'Upload a Profile Picture'}</label>
+          <input
+            type="file"
+            id="profile"
+            name="profile"
+            style={{ display: 'none' }}
+            className=''
+            // value={profile}
+            onChange={(e) => setProfile(e.target.files[0])}
+            placeholder="Enter full name"
+          />
+          {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
+        </div>
+
+        {
+          user?.designation === 'admin' &&
+          <div className="form-group">
+            <label htmlFor="branch" className="form-label">Branch</label>
+            <select onChange={handleChange} name="branch" id="branch" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
+              <option value="" disabled selected>--Branch--</option>
+              {
+                user?.branches?.map((curElem) => {
+                  const isBranchAssigned = managers.some((man) => man.branch === curElem);
+
+                  if (!isBranchAssigned || designation !== 'Manager') {
+                    return (
+                      <option key={curElem} value={curElem}>
+                        {curElem}
+                      </option>
+                    );
+                  }
+                  return null;
+                })
+              }
+
+            </select>
+            {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
+          </div>
+        }
+        {
+          user?.designation !== 'Team Leader' &&
+          <>
+            {
+              (designation === 'Executive' || designation === 'Team Leader') &&
+              <div className="form-group">
+                <label htmlFor="department" className="form-label">Department</label>
+                <select onChange={handleChange} name="department" id="department" className={`form-control ${errors.branch ? 'border-error' : ''}`}>
+                  <option value="" disabled selected>--Department--</option>
+                  {
+                    departments?.map((curElem) => (
+                      curElem?.branch === formData?.branch &&
+                        (designation === 'Executive' || (initialData || !curElem?.teamleader)) ? (
+                        <option key={curElem?.name} value={curElem?.name}>
+                          {curElem?.name}
+                        </option>
+                      ) : null
+                    ))
+                  }
+                </select>
+                {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
+              </div>
+            }
+          </>
+        }
+
+
+        <div className="flex gap-2 justify-end mt-4">
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          {
+            loading ? <button className="btn btn-primary">
+              <img src="/img/loader.png" className='Loader' alt="loader" />
+            </button>
+              :
+              <button
+                type="submit"
+                className="btn btn-primary"
+                onClick={initialData ? updateUser : makeUser}
+              >
+                {initialData ? 'Update Now' : 'Create Now'}
+              </button>
+          }
+        </div>
+      </form>
+    </>
   );
 }
 

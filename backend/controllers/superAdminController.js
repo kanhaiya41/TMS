@@ -4,6 +4,12 @@ import UserRequests from '../models/reqModel.js';
 import Branch from '../models/branchModel.js';
 import Admin from '../models/adminModel.js';
 import Notification from '../models/notificationModel.js';
+import Manager from '../models/managerModel.js';
+import TeamLeader from '../models/teamLeaderModel.js';
+import Tickets from '../models/ticketModel.js';
+import UserEditRequests from '../models/userReqModel.js';
+import Department from '../models/departmentModel.js';
+import TicketSettings from '../models/ticketSetingsModel.js';
 
 export const makeAdmin = async (req, res) => {
     try {
@@ -112,6 +118,12 @@ export const createBranch = async (req, res) => {
     try {
         const branch = await Branch(req.body);
         const saveBranch = await branch.save();
+        if (req?.body?.admin) {
+            const updateAdmin = await Admin.updateOne(
+                { username: req.body.admin },
+                { $addToSet: { branches: req.body.name } },
+            )
+        }
         if (saveBranch) {
             return res.status(200).json({
                 success: true,
@@ -152,7 +164,6 @@ export const getBranches = async (req, res) => {
 export const updateBranch = async (req, res) => {
     console.log('branchid', req.body.branchid);
     try {
-
         const branchId = req.body.branchid;
         const branch = await Branch.findById(branchId);
         let branchUpdated = false;
@@ -181,9 +192,8 @@ export const updateBranch = async (req, res) => {
             const adminBranch = await Branch.findByIdAndUpdate(
                 branchId,
                 { admin: req.body.admin },
-                { new: true } // So you get the updated document
+                // { new: true } // So you get the updated document
             );
-
 
             if (!adminBranch) {
                 return res.status(404).json({ message: "Branch not found" });
@@ -234,6 +244,42 @@ export const deleteBranch = async (req, res) => {
     try {
         const id = req.params.id;
         const branch = await Branch.findByIdAndDelete(id);
+        const admin = await Admin.findOneAndUpdate(
+            { branches: branch.name },
+            { $pull: { branches: branch.name } }
+        );
+        const manager = await Manager.deleteOne(
+            { branch: branch.name }
+        );
+        const TLs = await TeamLeader.deleteMany(
+            { branch: branch.name }
+        );
+        const executives = await User.deleteMany(
+            { branch: branch.name }
+        );
+        const tickets = await Tickets.deleteMany(
+            { branch: branch.name }
+        );
+        const passreq = await UserRequests.deleteMany(
+            { branch: branch.name }
+        );
+        const userEditReq = await UserEditRequests.deleteMany(
+            { branch: branch.name }
+        );
+        const dept = await Department.deleteMany(
+            { branch: branch.name }
+        );
+        const ticketSettings = await TicketSettings.updateOne(
+            { branches: branch.name },
+            { $pull: { branches: branch.name } }
+        );
+        const notify = await Notification.updateOne(
+            { branches: branch.name },
+            { $pull: { branches: branch.name } }
+        )
+        const notifybranch = await Notification.deleteMany(
+            { branch: branch.name }
+        )
         if (branch) {
             return res.status(200).json({
                 success: true,

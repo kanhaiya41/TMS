@@ -141,7 +141,6 @@ export const login = async (req, res) => {
             user = await User.findOne({ email });
         }
 
-
         if (!user) {
             return res.status(401).json({
                 success: false,

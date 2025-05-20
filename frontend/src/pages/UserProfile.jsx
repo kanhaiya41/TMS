@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import axios from 'axios';
 import URI from '../utills'
 import toast from 'react-hot-toast';
+import SessionEndWarning from '../components/SessionEndWarning';
 
 function UserProfile() {
 
@@ -17,7 +18,6 @@ function UserProfile() {
   });
   const [profile, setProfile] = useState(null);
 
-
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -27,6 +27,11 @@ function UserProfile() {
   const [errors, setErrors] = useState({});
 
   const [userRequest, setUserRequest] = useState([]);
+  const [loadingC, setLoadingC] = useState(false);
+  const [loadingCS, setLoadingCS] = useState(false);
+  const [loadingE, setLoadingE] = useState(false);
+  const [loadingES, setLoadingES] = useState(false);
+  const [sessionWarning, setSessionWarning] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -88,14 +93,19 @@ function UserProfile() {
       const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(r => {
         fetchEditProfileRequest();
         // toast.success(r?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -108,7 +118,8 @@ function UserProfile() {
   const updateUser = async (e) => {
     try {
       e.preventDefault();
-
+      setLoadingCS(true);
+      setLoadingES(true);
       const formdata = new FormData();
       // formdata.append('username', formData?.username);
       formdata.append('email', formData?.email);
@@ -129,7 +140,8 @@ function UserProfile() {
       const res = await axios.post(`${URI}/admin/updateuser`, formdata, {
         headers: {
           'Content-Type': 'multipart/form-data'
-        }
+        },
+        withCredentials: true
       }).then(async (res) => {
         // fetchAllUsers();
         if (!user?.designation?.includes('admin')) {
@@ -152,8 +164,12 @@ function UserProfile() {
 
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -161,6 +177,10 @@ function UserProfile() {
 
     } catch (error) {
       console.log("while updating user");
+    }
+    finally {
+      setLoadingCS(false);
+      setLoadingES(false);
     }
   }
 
@@ -182,7 +202,8 @@ function UserProfile() {
       const res = await axios.post(`${URI}/auth/updatepassword`, newRequest, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(async (r) => {
         await statusUpdateforUserRequest(activeRequest?._id, 'expired');
         setShowPasswordForm(false);
@@ -194,8 +215,12 @@ function UserProfile() {
         toast.success(r?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -263,6 +288,12 @@ function UserProfile() {
 
   const ReqToEditProfile = async (reqto, status) => {
     try {
+      if (reqto === 'Change Password') {
+        setLoadingC(true);
+      }
+      else {
+        setLoadingE(true);
+      }
       const data = {
         username: user?.username,
         email: user?.email,
@@ -278,23 +309,27 @@ function UserProfile() {
       const res = await axios.post(`${URI}/auth/reqforupdateprofile`, data, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(async r => {
 
-        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: user?.branch, section: 'userreq', department: user?.department,designation:user?.designation },
+        const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: user?.branch, section: 'userreq', department: user?.department, designation: user?.designation },
           {
             headers: {
               'Content-Type': 'application/json'
             }
           }
         )
-
         fetchEditProfileRequest();
         toast.success(r?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -302,10 +337,19 @@ function UserProfile() {
     } catch (error) {
       console.log('while requesting for edit profile', error);
     }
+    finally {
+      if (reqto === 'Change Password') {
+        setLoadingC(false);
+      }
+      else {
+        setLoadingE(false);
+      }
+    }
   }
 
   return (
     <div className="animate-fade">
+      {sessionWarning && <SessionEndWarning setSessionWarning={setSessionWarning} />}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">User Profile</h2>
       </div>
@@ -460,12 +504,19 @@ function UserProfile() {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                  >
-                    Save Changes
-                  </button>
+                  {
+                    loadingES ? <button className="btn btn-primary">
+                      <img src="/img/loader.png" className='Loader' alt="loader" />
+                    </button>
+                      :
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                      >
+                        Save Changes
+                      </button>
+                  }
+
                 </div>
               </form>
             </div>
@@ -535,12 +586,18 @@ function UserProfile() {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                  >
-                    Submit
-                  </button>
+                  {
+                    loadingCS ? <button className="btn btn-primary">
+                      <img src="/img/loader.png" className='Loader' alt="loader" />
+                    </button>
+                      :
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                      >
+                        Submit
+                      </button>
+                  }
                 </div>
               </form>
             </div>
@@ -622,23 +679,33 @@ function UserProfile() {
                         >
                           Change Password
                         </button> :
+
                         <>
                           {
                             !userRequest?.some((req) => req.reqto === 'Change Password') ? (
-                              <button
-                                className="btn btn-outline"
-                                onClick={() => ReqToEditProfile('Change Password', 'pending')}
-                              >
-                                <span>Req. for Change Password</span>
-                              </button>
-                            ) : userRequest?.find((req) => req.reqto === 'Change Password')?.status === 'allow' ? (
+                              <>
+                                {
+                                  loadingC ? <button className="btn btn-primary">
+                                    < img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <button
+                                      className="btn btn-outline"
+                                      onClick={() => ReqToEditProfile('Change Password', 'pending')}
+                                    >
+                                      <span>Req. for Change Password</span>
+                                    </button>
+                                }
+                              </>
+
+                            ) : userRequest?.find((req) => req.reqto === 'Change Password' && req?.status === 'allow') ? (
                               <button
                                 className="btn btn-outline"
                                 onClick={() => setShowPasswordForm(true)}
                               >
                                 Change Password
                               </button>
-                            ) : userRequest?.find((req) => req.reqto === 'Change Password')?.status === 'pending' ? (
+                            ) : userRequest?.find((req) => req.reqto === 'Change Password' && req?.status === 'pending') ? (
                               <button
                                 className="btn btn-outline"
                                 disabled
@@ -646,17 +713,23 @@ function UserProfile() {
                                 Change Password Req. Pending
                               </button>
                             ) :
-                              <button
-                                className="btn btn-outline"
-
-                              >
-                                Req. for Change Password
-                              </button>
+                              <>
+                                {
+                                  loadingC ? <button className="btn btn-primary">
+                                    < img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <button
+                                      className="btn btn-outline"
+                                      onClick={() => ReqToEditProfile('Change Password', 'pending')}
+                                    >
+                                      <span>Req. for Change Password</span>
+                                    </button>
+                                }
+                              </>
                           }
                         </>
                     }
-
-
                   </div>
 
                   <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
@@ -671,20 +744,28 @@ function UserProfile() {
                         <>
                           {
                             !userRequest?.some((req) => req.reqto === 'Edit Profile') ? (
-                              <button
-                                className="btn btn-primary"
-                                onClick={() => ReqToEditProfile('Edit Profile', 'pending')}
-                              >
-                                Req. for Edit Profile
-                              </button>
-                            ) : userRequest?.find((req) => req.reqto === 'Edit Profile')?.status === 'allow' ? (
+                              <>
+                                {
+                                  loadingE ? <button className="btn btn-primary">
+                                    < img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <button
+                                      className="btn btn-primary"
+                                      onClick={() => ReqToEditProfile('Edit Profile', 'pending')}
+                                    >
+                                      Req. for Edit Profile
+                                    </button>
+                                }
+                              </>
+                            ) : userRequest?.find((req) => req.reqto === 'Edit Profile' && req?.status === 'allow') ? (
                               <button
                                 className="btn btn-primary"
                                 onClick={() => setIsEditing(true)}
                               >
                                 Edit Profile
                               </button>
-                            ) : userRequest?.find((req) => req.reqto === 'Edit Profile')?.status === 'pending' ? (
+                            ) : userRequest?.find((req) => req.reqto === 'Edit Profile' && req?.status === 'pending') ? (
                               <button
                                 className="btn btn-outline"
                                 disabled
@@ -693,11 +774,20 @@ function UserProfile() {
                               </button>
                             ) :
                               (
-                                <button
-                                  className="btn btn-outline"
-                                >
-                                  Edit Profile Req. Pending
-                                </button>
+                                <>
+                                  {
+                                    loadingE ? <button className="btn btn-primary">
+                                      < img src="/img/loader.png" className='Loader' alt="loader" />
+                                    </button>
+                                      :
+                                      <button
+                                        className="btn btn-primary"
+                                        onClick={() => ReqToEditProfile('Edit Profile', 'pending')}
+                                      >
+                                        Req. for Edit Profile
+                                      </button>
+                                  }
+                                </>
                               )
                           }
                         </>

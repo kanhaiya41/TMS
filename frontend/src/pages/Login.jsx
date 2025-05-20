@@ -167,7 +167,8 @@ function Login() {
       const res = await axios.post(`${URI}/auth/login`, { email: email, password: password, designation: designation }, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         dispatch(setUser(res?.data?.user));
         toast.success(res.data.message);

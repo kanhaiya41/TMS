@@ -2,16 +2,16 @@ import mongoose from 'mongoose';
 
 const ticketSchema = new mongoose.Schema({
     name: String,
-    email: String,
     subject: String,
     mobile: Number,
-    date: Date,
-    time: String,
+    category: String,
     priority: String,
+    tat: String,
     department: [
         {
             name: String,
-            description: String
+            description: String,
+            users: Array
         }
     ],
     issuedby: String,

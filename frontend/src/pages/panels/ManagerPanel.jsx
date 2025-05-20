@@ -6,7 +6,7 @@ import mockPasswordRequests from '../../data/mockPasswordRequests';
 import mockDepartments from '../../data/mockDepartments';
 import mockBranches from '../../data/mockBranches';
 import { } from '@fortawesome/free-brands-svg-icons'
-import { faBell, faBuilding, faChartBar, faEdit, faEye, faMoon, faUser } from '@fortawesome/free-regular-svg-icons'
+import { faBell, faBuilding, faChartBar, faCommentDots, faEdit, faEye, faMoon, faUser } from '@fortawesome/free-regular-svg-icons'
 import { faBars, faChartLine, faGear, faLock, faSignOut, faTicketAlt, faTimes, faTrash, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import UserForm from '../../components/UserForm';
@@ -14,6 +14,7 @@ import TicketForm from '../../components/TicketForm';
 import axios from 'axios';
 import URI from '../../utills';
 import toast from 'react-hot-toast';
+import SessionEndWarning from '../../components/SessionEndWarning';
 
 function ManagerPanel({ user, view = 'branch' }) {
   const [branch, setBranch] = useState(null);
@@ -37,7 +38,9 @@ function ManagerPanel({ user, view = 'branch' }) {
   const [reAssignto, setReAssignto] = useState('');
   const [department, setDepartment] = useState(null);
   const [comment, setComment] = useState('');
-
+  const [isCommentOpen, setIsCommentOpen] = useState(false);
+  const [loading, setLoading] = useState();
+  const [sessionWarning, setSessionWarning] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,6 +68,33 @@ function ManagerPanel({ user, view = 'branch' }) {
       console.log("while fetching all Users data", error);
     }
   }
+  const [ticketSettings, setTicketSettings] = useState({});
+
+  const fetchTicketSettings = async () => {
+    try {
+      const branch = user?.branch;
+      const res = await axios.get(`${URI}/admin/getticketsettings/${branch}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(r => {
+        setTicketSettings(r?.data?.ticketSettings);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while fetching Ticket Settings', error);
+    }
+  }
+
+  useEffect(() => {
+    fetchTicketSettings();
+  }, [])
 
   //fetch users
   const fetchAllUsers = async () => {
@@ -94,13 +124,18 @@ function ManagerPanel({ user, view = 'branch' }) {
       const res = await axios.get(`${URI}/executive/getalltickets`, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         setTickets(res?.data?.data?.filter((tickt) => tickt?.branch === user?.branch));
       }).catch(err => {
         // Handle error and show toast
-        if (err?.response && err?.response?.data && err?.response?.data?.message) {
-          toast.error(err?.response?.data?.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -116,7 +151,8 @@ function ManagerPanel({ user, view = 'branch' }) {
       const res = await axios.get(`${URI}/admin/department`, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         setDepartments(res?.data?.departmentes?.filter((dept) => dept?.branch === user?.branch));
       }).catch(err => {
@@ -202,6 +238,73 @@ function ManagerPanel({ user, view = 'branch' }) {
     });
   };
 
+  const formatTat = (tat, createdAt) => {
+    const now = Date.now(); // current time in ms
+    const [valueStr, unitRaw] = tat?.toLowerCase()?.split(" ");
+    const value = parseInt(valueStr);
+    const unit = unitRaw.trim();
+
+    let tatInMs = 0;
+
+    if (unit?.startsWith("day")) {
+      tatInMs = value * 24 * 60 * 60 * 1000; // days to ms
+    } else if (unit?.startsWith("week")) {
+      tatInMs = value * 7 * 24 * 60 * 60 * 1000; // weeks to ms
+    } else if (unit?.startsWith("hour")) {
+      tatInMs = value * 60 * 60 * 1000; // hours to ms
+    } else if (unit?.startsWith("minute")) {
+      tatInMs = value * 60 * 1000; // minutes to ms
+    } else {
+      return "Invalid TAT format";
+    }
+
+    const elapsed = now - new Date(createdAt).getTime(); // ms since created
+
+    if (elapsed > tatInMs) {
+      return "TAT Over";
+    } else {
+      const remaining = tatInMs - elapsed;
+      const mins = Math.floor((remaining / 1000 / 60) % 60);
+      const hrs = Math.floor((remaining / (1000 * 60 * 60)) % 24);
+      const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const sec = Math.floor((remaining / 1000) % 60);
+      return `Remaining: ${days > 0 ? `${days}d ` : ''
+        }${hrs > 0 ? `${hrs}h ` : ''
+        }${mins > 0 ? `${mins}m` : ''
+        }${!mins > 0 ? `${sec}s` : ''}`.trim();
+    }
+  };
+
+  const tatBG = (tat, createdAt) => {
+    const now = Date.now(); // current time in ms
+    const [valueStr, unitRaw] = tat?.toLowerCase()?.split(" ");
+    const value = parseInt(valueStr);
+    const unit = unitRaw.trim();
+
+    let tatInMs = 0;
+
+    if (unit?.startsWith("day")) {
+      tatInMs = value * 24 * 60 * 60 * 1000; // days to ms
+    } else if (unit?.startsWith("week")) {
+      tatInMs = value * 7 * 24 * 60 * 60 * 1000; // weeks to ms
+    } else if (unit?.startsWith("hour")) {
+      tatInMs = value * 60 * 60 * 1000; // hours to ms
+    } else if (unit?.startsWith("minute")) {
+      tatInMs = value * 60 * 1000; // minutes to ms
+    } else {
+      return "Invalid TAT format";
+    }
+
+    const elapsed = now - new Date(createdAt).getTime();
+    const percentElapsed = (elapsed / tatInMs) * 100;
+
+    if (percentElapsed >= 100) return "red";
+    if (percentElapsed >= 90) return "orange";
+    if (percentElapsed >= 50) return "#aec81d";
+    return "green";
+
+  }
+
   // Statistics for branch overview
   const getBranchStats = () => {
     return {
@@ -235,14 +338,19 @@ function ManagerPanel({ user, view = 'branch' }) {
       const res = await axios.delete(`${URI}/admin/deleteupdaterequest/${id}`, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         getAllRequests();
         toast.success(res?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err?.response && err?.response?.data && err?.response?.data.message) {
-          toast.error(err?.response?.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -280,55 +388,74 @@ function ManagerPanel({ user, view = 'branch' }) {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedTicket(null);
+    setIsCommentOpen(false);
   };
 
   //add comment on ticket
   const addCommentOnTicket = async () => {
     try {
       const ticketId = selectedTicket?._id;
-      const commenter = user?.department;
-      const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }).then(res => {
-        fetchAllTickets();
-        handleCloseModal();
-        setComment('');
-        toast.success(res?.data?.message);
-      }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
+      const commenter = `${user?.username}(${user?.department && user?.department ? ' - ' : ''}  ${user?.designation})`;
+      if (comment) {
+        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+        withCredentials: true
+        }).then(res => {
+          fetchAllTickets();
+          handleCloseModal();
+          setComment('');
+          toast.success(res?.data?.message);
+        }).catch(err => {
+          // Handle error and show toast
+          if (err.response && err.response.data) {
+            if (err.response.data.notAuthorized) {
+              setSessionWarning(true);
+            } else {
+              toast.error(err.response.data.message || "Something went wrong");
+            }
+          } else {
+            toast.error("Something went wrong");
+          }
+        });
+      }
+      else {
+        toast.error('Please fill the Comment Box!');
+      }
     } catch (error) {
       console.log('error while adding comment', error);
     }
   }
 
+  const [myDept, setMyDept] = useState({});
+
   const handleViewTicket = (ticket) => {
     setSelectedTicket(ticket);
+    setMyDept(ticket?.department?.find((dept) => dept?.name === user?.department || ticket?.issuedby === user?.username));
     setIsModalOpen(true);
   };
 
   const reAssignTicket = async () => {
     try {
-      const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto })
-        .then(res => {
-          fetchAllTickets();
-          handleCloseModal();
-          toast.success(res?.data?.message);
-        }).catch(err => {
-          // Handle error and show toast
-          if (err.response && err.response.data && err.response.data.message) {
-            toast.error(err.response.data.message); // For 400, 401, etc.
-          } else {
-            toast.error("Something went wrong");
-          }
-        });
+      if (reAssignto) {
+        const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto })
+          .then(res => {
+            fetchAllTickets();
+            handleCloseModal();
+            toast.success(res?.data?.message);
+          }).catch(err => {
+            // Handle error and show toast
+            if (err.response && err.response.data && err.response.data.message) {
+              toast.error(err.response.data.message); // For 400, 401, etc.
+            } else {
+              toast.error("Something went wrong");
+            }
+          });
+      }
+      else {
+        toast.error('Please Selcet a Department!')
+      }
     } catch (error) {
       console.log("while Re-Assigning the Ticket", error);
       toast.error('Error While Re-Assigning the Ticket', error);
@@ -338,17 +465,26 @@ function ManagerPanel({ user, view = 'branch' }) {
   //update ticket status
   const handleUpdateTicketStatus = async (ticketId, status) => {
     try {
+      setLoading({
+        status: true,
+        id: ticketId
+      });
       const res = await axios.post(`${URI}/executive/updateticketstatus`, { ticketId, status }, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(res => {
         fetchAllTickets();
         toast.success(res?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err?.response && err?.response?.data && err?.response?.data.message) {
-          toast.error(err?.response?.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -356,6 +492,12 @@ function ManagerPanel({ user, view = 'branch' }) {
 
     } catch (error) {
       console.log('error while ticket updation', error);
+    }
+    finally {
+      setLoading({
+        status: false,
+        id: ticketId
+      });
     }
   }
 
@@ -426,10 +568,15 @@ function ManagerPanel({ user, view = 'branch' }) {
 
   const statusUpdateforUserRequest = async (requestId, status, email) => {
     try {
+      setLoading({
+        status: true,
+        id: requestId
+      });
       const res = await axios.post(`${URI}/auth/statusupdateforuserrequest`, { requestId, status }, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        withCredentials: true
       }).then(async r => {
 
         const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: email, section: 'profile' },
@@ -444,8 +591,12 @@ function ManagerPanel({ user, view = 'branch' }) {
         toast.success(r?.data?.message);
       }).catch(err => {
         // Handle error and show toast
-        if (err.response && err.response.data && err.response.data.message) {
-          toast.error(err.response.data.message); // For 400, 401, etc.
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
         } else {
           toast.error("Something went wrong");
         }
@@ -453,8 +604,13 @@ function ManagerPanel({ user, view = 'branch' }) {
     } catch (error) {
       console.log('while status update for user request');
     }
+    finally {
+      setLoading({
+        status: false,
+        id: requestId
+      });
+    }
   }
-
   const renderContent = () => {
     switch (view) {
       case 'branch':
@@ -579,15 +735,18 @@ function ManagerPanel({ user, view = 'branch' }) {
                   <thead>
                     <tr>
                       <th>Department</th>
-                      <th>Team Leaders</th>
-                      <th>Executives</th>
+                      <th>Total Tickets</th>
                       <th>Open Tickets</th>
+                      <th>Over Tat</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody onClick={() => navigate('/dashboard/tickets')}>
                     {departments?.map(dept => {
-                      const deptTeamLeaders = teamLeaders?.filter(tl => tl?.department === dept?.name);
-                      const deptExecutives = executives?.filter(exec => exec?.department === dept?.name);
+                      // const deptTeamLeaders = teamLeaders?.filter(tl => tl?.department === dept?.name);
+                      const overTat = tickets?.filter(ticket => ticket?.department?.find(d => d.name === dept.name) && ticket?.status !== 'resolved' && ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt) === 'TAT Over');
+                      const deptTotalTickets = tickets?.filter(t =>
+                        t.department?.some(d => d.name === dept?.name)
+                      );
                       const deptOpenTickets = tickets?.filter(t =>
                         t.department?.some(d => d.name === dept?.name) && t?.status === 'open'
                       );
@@ -595,9 +754,10 @@ function ManagerPanel({ user, view = 'branch' }) {
                       return (
                         <tr key={dept.id}>
                           <td>{dept.name}</td>
-                          <td>{deptTeamLeaders.length}</td>
-                          <td>{deptExecutives.length}</td>
-                          <td>{deptOpenTickets.length}</td>
+                          <td>{deptTotalTickets?.length}</td>
+                          <td>{deptOpenTickets?.length}</td>
+                          <td style={{ color: 'red', fontWeight: 'bold' }}>{overTat?.length}</td>
+
                         </tr>
                       );
                     })}
@@ -719,7 +879,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                               >
                                 Edit
                               </button>
-                              <button
+                              {/* <button
                                 className="btn btn-sm btn-error"
                                 onClick={() => {
                                   setUserToDelete(tl);
@@ -728,7 +888,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                                 }}
                               >
                                 Delete
-                              </button>
+                              </button> */}
                             </div>
                           </td>
                         </tr>
@@ -785,7 +945,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                               >
                                 Edit
                               </button>
-                              <button
+                              {/* <button
                                 className="btn btn-sm btn-error"
                                 onClick={() => {
                                   setUserToDelete(exec);
@@ -794,7 +954,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                                 }}
                               >
                                 Delete
-                              </button>
+                              </button> */}
                             </div>
                           </td>
                         </tr>
@@ -927,15 +1087,18 @@ function ManagerPanel({ user, view = 'branch' }) {
                         {/* <th>Department</th> */}
                         <th>Status</th>
                         <th>Priority</th>
-                        <th>Created</th>
+                        <th>T.A.T.</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredTickets?.map((ticket, index) => {
-                        const creator = mockUsers.find(u => u.id === ticket.createdBy);
                         return (
-                          ticket?.status === 'in-progress' &&
+                          // tickets?.filter(ticket => ticket?.department?.find(d => d.name === dept.name) &&
+                          ticket?.status !== 'resolved'
+                          && ticket?.tat
+                          && tatBG(ticket?.tat, ticket?.createdAt) === 'red' &&
+                          // ticket?.status === 'in-progress' &&
                           <tr key={index + 1}>
                             {/* <td>#{index + 1}</td> */}
                             <td>{ticket.subject}</td>
@@ -953,43 +1116,62 @@ function ManagerPanel({ user, view = 'branch' }) {
                               <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
                                 ticket.priority === 'medium' ? 'badge-warning' :
                                   'badge-primary'
-                                }`}>
+                                }`}
+                                style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                              >
                                 {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                               </span>
                             </td>
-                            <td>{formatDate(ticket.createdAt)}</td>
+                            <td>
+                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                ticket?.status === 'in-progress' ? 'badge-primary' :
+                                  'badge-success'
+                                }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
+                                {ticket?.tat}
+                              </span>
+                            </td>
                             <td>
                               <div className="flex gap-2" style={{ justifyContent: 'center' }}>
-                                {ticket.status !== 'resolved' && (
-                                  <>
-                                    {ticket.status === 'open' && (
-                                      <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
-                                      >
-                                        Start
-                                      </button>
-                                    )}
-                                    {ticket.status === 'in-progress' && (
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
-                                      >
-                                        Resolve
-                                      </button>
-                                    )}
-                                  </>
-                                )}
-                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                                {
+                                  loading?.id === ticket?._id && loading?.status ? <button className={`btn btn-${ticket?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <>
+                                      {ticket?.status !== 'resolved' && (
+                                        <>
+                                          {ticket?.status === 'open' && (
+                                            <button
+                                              className="btn btn-sm btn-primary"
+                                              onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
+                                            >
+                                              Start
+                                            </button>
+                                          )}
+                                          {ticket?.status === 'in-progress' && (
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
+                                            >
+                                              Resolve
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+                                    </>
+                                }
+                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)} >View</button>
                               </div>
                             </td>
                           </tr>
                         );
                       })}
                       {filteredTickets?.map((ticket, index) => {
-                        const creator = mockUsers.find(u => u.id === ticket.createdBy);
                         return (
-                          ticket?.status === 'open' &&
+                          // ticket?.status === 'open' &&
+                          ticket?.status !== 'resolved'
+                          && ticket?.tat
+                          && tatBG(ticket?.tat, ticket?.createdAt) !== 'red' &&
                           <tr key={index + 1}>
 
                             <td>{ticket.subject}</td>
@@ -1007,45 +1189,60 @@ function ManagerPanel({ user, view = 'branch' }) {
                               <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
                                 ticket.priority === 'medium' ? 'badge-warning' :
                                   'badge-primary'
-                                }`}>
+                                }`}
+                                style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                              >
                                 {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                               </span>
                             </td>
-                            <td>{formatDate(ticket.createdAt)}</td>
+                            <td>
+                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                ticket?.status === 'in-progress' ? 'badge-primary' :
+                                  'badge-success'
+                                }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
+                                {ticket?.tat}
+                              </span>
+                            </td>
                             <td>
                               <div className="flex gap-2" style={{ justifyContent: 'center' }}>
-                                {ticket.status !== 'resolved' && (
-                                  <>
-                                    {ticket.status === 'open' && (
-                                      <button
-                                        className="btn btn-sm btn-primary"
-                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
-                                      >
-                                        Start
-                                      </button>
-                                    )}
-                                    {ticket.status === 'in-progress' && (
-                                      <button
-                                        className="btn btn-sm btn-success"
-                                        onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
-                                      >
-                                        Resolve
-                                      </button>
-                                    )}
-                                  </>
-                                )}
-                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                                {
+                                  loading?.id === ticket?._id && loading?.status ? <button className={`btn btn-${ticket?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <>
+                                      {ticket?.status !== 'resolved' && (
+                                        <>
+                                          {ticket?.status === 'open' && (
+                                            <button
+                                              className="btn btn-sm btn-primary"
+                                              onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
+                                            >
+                                              Start
+                                            </button>
+                                          )}
+                                          {ticket?.status === 'in-progress' && (
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
+                                            >
+                                              Resolve
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+                                    </>
+                                }
+                                <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)} >View</button>
                               </div>
                             </td>
                           </tr>
                         );
                       })}
                       {filteredTickets?.map((ticket, index) => {
-                        const creator = mockUsers.find(u => u.id === ticket.createdBy);
                         return (
                           ticket?.status === 'resolved' &&
                           <tr key={index + 1}>
-
                             <td>{ticket.subject}</td>
                             {/* <td>{ticket?.department}</td> */}
                             <td>
@@ -1061,11 +1258,20 @@ function ManagerPanel({ user, view = 'branch' }) {
                               <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
                                 ticket.priority === 'medium' ? 'badge-warning' :
                                   'badge-primary'
-                                }`}>
+                                }`}
+                                style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                              >
                                 {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                               </span>
                             </td>
-                            <td>{formatDate(ticket.createdAt)}</td>
+                            <td>
+                              <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                                ticket?.status === 'in-progress' ? 'badge-primary' :
+                                  'badge-success'
+                                }`} >
+                                {ticket?.tat}
+                              </span>
+                            </td>
                             <td>
                               <div className="flex gap-2" style={{ justifyContent: 'center' }}>
                                 {ticket.status !== 'resolved' && (
@@ -1204,12 +1410,12 @@ function ManagerPanel({ user, view = 'branch' }) {
 
                                 <FontAwesomeIcon icon={faEdit} />
                               </button>
-                              <button
+                              {/* <button
                                 className="btn btn-sm btn-error"
                                 onClick={() => deleteUpdateRequest(request?._id)}
                               >
                                 <FontAwesomeIcon icon={faTrash} />
-                              </button>
+                              </button> */}
                             </div>
                             {/* ) : ( */}
                             {/* <button className="btn btn-sm btn-outline">View</button> */}
@@ -1262,7 +1468,6 @@ function ManagerPanel({ user, view = 'branch' }) {
               <table className="table">
                 <thead>
                   <tr>
-
                     <th>User</th>
                     <th>Role</th>
                     <th>Department</th>
@@ -1274,48 +1479,193 @@ function ManagerPanel({ user, view = 'branch' }) {
                   {userRequest?.map((request, index) => {
                     return (
                       <>
-                        <tr key={request?.id} >
+                        {
+                          request.status === 'pending' && request?.designation === 'Team Leader' &&
+                          <tr key={request?.id} >
 
-                          <td style={{ display: 'flex', justifyContent: 'center' }}>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
 
-                            <div className="flex items-center gap-2">
-                              <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="PF" />
-                              <span>{request?.username}</span>
-                            </div>
+                              <div className="flex items-center gap-2">
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
+                                <span>{request?.username}</span>
+                              </div>
 
-                          </td>
-                          <td>
-                            {request?.designation}
-                          </td>
-                          <td>{request?.department}</td>
-                          <td>{request?.reqto}</td>
-                          <td style={{ display: 'flex', justifyContent: 'center' }}>
-                            {/* {request?.status === 'pending' ? ( */}
-                            <div className="flex gap-2" >
-                              {
-                                request?.status === 'pending' ?
-                                  <>
-                                    <button
-                                      className="btn btn-sm btn-success"
-                                      onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
-                                    >Accept
-                                    </button>
-                                    <button
-                                      className="btn btn-sm btn-error"
-                                      onClick={() => deleteUpdateRequest(request?._id)}
-                                    >
-                                      Delete
-                                    </button>
-                                  </> :
-                                  'Accepted'
-                              }
-                            </div>
+                            </td>
+                            <td>
+                              {request?.designation}
+                            </td>
+                            <td> {
+                              request?.designation === 'Manager' ? '----' : request?.department ? request?.department : 'N/A'
+                            }
+                            </td>
+                            <td>{request?.reqto}</td>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                              {/* {request?.status === 'pending' ? ( */}
+                              <div className="flex gap-2">
+                                {
+                                  loading?.id === request?._id && loading?.status ? <button className={`btn btn-${request?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <>
+                                      {
+                                        request?.status === 'pending' ?
+                                          <>
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                            >Accept
+                                            </button>
+                                            {/* <button
+                                              className="btn btn-sm btn-error"
+                                              onClick={() => deleteUpdateRequest(request?._id)}
+                                            >
+                                              Delete
+                                            </button> */}
+                                          </> :
+                                          'Accepted'
+                                        // <button
+                                        //   className="btn btn-sm btn-error"
+                                        // // onClick={() => deleteUpdateRequest(request?._id)}
+                                        // >
+                                        //   View
+                                        // </button>
+                                      }
+                                    </>
+                                }
+                              </div>
 
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
+                        }
 
                       </>
+                    );
+                  })}
+                  {userRequest?.map((request, index) => {
+                    return (
+                      <>
+                        {
+                          request.status === 'pending' && request?.designation === 'Executive' &&
+                          <tr key={request?.id} >
 
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+
+                              <div className="flex items-center gap-2">
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
+                                <span>{request?.username}</span>
+                              </div>
+
+                            </td>
+                            <td>
+                              {request?.designation}
+                            </td>
+                            <td>{request?.department}</td>
+                            <td>{request?.reqto}</td>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                              {/* {request?.status === 'pending' ? ( */}
+                              <div className="flex gap-2">
+                                {
+                                  loading?.id === request?._id && loading?.status ? <button className={`btn btn-${request?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <>
+                                      {
+                                        request?.status === 'pending' ?
+                                          <>
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                            >Accept
+                                            </button>
+                                            {/* <button
+                                              className="btn btn-sm btn-error"
+                                              onClick={() => deleteUpdateRequest(request?._id)}
+                                            >
+                                              Delete
+                                            </button> */}
+                                          </> :
+                                          'Accepted'
+                                        // <button
+                                        //   className="btn btn-sm btn-error"
+                                        // // onClick={() => deleteUpdateRequest(request?._id)}
+                                        // >
+                                        //   View
+                                        // </button>
+                                      }
+                                    </>
+                                }
+                              </div>
+
+                            </td>
+                          </tr>
+                        }
+
+                      </>
+                    );
+                  })}
+                  {userRequest?.map((request, index) => {
+                    return (
+                      <>
+                        {
+                          request.status !== 'pending' &&
+                          <tr key={request?.id} >
+
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+
+                              <div className="flex items-center gap-2">
+                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
+                                <span>{request?.username}</span>
+                              </div>
+
+                            </td>
+                            <td>
+                              {request?.designation}
+                            </td>
+                            <td>{request?.department}</td>
+                            <td>{request?.reqto}</td>
+                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                              {/* {request?.status === 'pending' ? ( */}
+                              <div className="flex gap-2">
+                                {
+                                  loading?.id === request?._id && loading?.status ? <button className={`btn btn-${request?.status === 'open' ? 'primary' : 'success'}`}>
+                                    <img src="/img/loader.png" className='Loader' alt="loader" />
+                                  </button>
+                                    :
+                                    <>
+                                      {
+                                        request?.status === 'pending' ?
+                                          <>
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
+                                            >Accept
+                                            </button>
+                                            {/* <button
+                                              className="btn btn-sm btn-error"
+                                              onClick={() => deleteUpdateRequest(request?._id)}
+                                            >
+                                              Delete
+                                            </button> */}
+                                          </> :
+                                          'Accepted'
+                                        // <button
+                                        //   className="btn btn-sm btn-error"
+                                        // // onClick={() => deleteUpdateRequest(request?._id)}
+                                        // >
+                                        //   View
+                                        // </button>
+                                      }
+                                    </>
+                                }
+                              </div>
+
+                            </td>
+                          </tr>
+                        }
+
+                      </>
                     );
                   })}
                 </tbody>
@@ -1334,6 +1684,7 @@ function ManagerPanel({ user, view = 'branch' }) {
 
   return (
     <div className="animate-fade">
+      {sessionWarning && <SessionEndWarning setSessionWarning={setSessionWarning} />}
       {renderContent()}
       {/* Ticket Detail Modal */}
       {isModalOpen && selectedTicket && (
@@ -1352,63 +1703,115 @@ function ManagerPanel({ user, view = 'branch' }) {
 
                   {/* Section 1: Ticket Info */}
                   <section className="space-y-2 border-b pb-4">
-                    <h4 className="text-lg font-bold">{selectedTicket?.subject}</h4>
-                    <div className="flex gap-3 flex-wrap">
-                      <span className={`badge ${selectedTicket?.status === 'open' ? 'badge-warning' :
-                        selectedTicket?.status === 'in-progress' ? 'badge-primary' : 'badge-success'}`}>
-                        {selectedTicket?.status === 'in-progress' ? 'In Progress' :
-                          selectedTicket?.status?.charAt(0).toUpperCase() + selectedTicket?.status?.slice(1)}
-                      </span>
-                      <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
-                        selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`}>
-                        {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
-                      </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <span style={{ float: 'left', display: 'flex', gap: '5px' }}>issuedby: <span style={{ fontWeight: 'bold' }} >{selectedTicket?.issuedby === user?.username ? 'You' : selectedTicket?.issuedby}</span > </span>
+                      <h4 style={{ display: 'flex', justifyContent: 'center', textAlign: 'center' }} className="text-lg font-bold">{selectedTicket?.category} -  <h5> {selectedTicket?.subject}</h5> </h4>
+                    </div>
+                    <div className="flex gap-3 flex-wrap" style={{ justifyContent: 'space-between' }}>
+                      <div className="flex gap-3 flex-wrap">
+                        <span className={`badge ${selectedTicket?.status === 'open' ? 'badge-warning' :
+                          selectedTicket?.status === 'in-progress' ? 'badge-primary' : 'badge-success'}`}>
+                          {selectedTicket?.status === 'in-progress' ? 'In Progress' :
+                            selectedTicket?.status?.charAt(0).toUpperCase() + selectedTicket?.status?.slice(1)}
+                        </span>
+                        <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
+                          selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`}
+                          style={{ background: ticketSettings?.priorities?.find(p => p?.name === selectedTicket?.priority)?.color }}
+                        >
+                          {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
+                        </span>
+                        <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
+                          selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`} style={{ background: selectedTicket?.tat && tatBG(selectedTicket?.tat, selectedTicket?.createdAt) }}>
+                          {selectedTicket?.tat && formatTat(selectedTicket?.tat, selectedTicket?.createdAt)}
+                        </span>
+                      </div>
                       <span className="text-sm text-muted">
-                        Created: {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
+                        {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
                       </span>
                     </div>
-                  </section>
-
+                  </section> <br />
+                  <hr />
                   {/* Section 2: User Info */}
                   <section className="space-y-2 border-b pb-4">
                     <h5 className="font-semibold">User Information</h5>
-                    <div className="flex gap-4 flex-wrap text-sm">
+                    <div className="flex gap-4 flex-wrap text-sm" style={{ justifyContent: 'center' }}>
                       <span><strong>Name:</strong> {selectedTicket?.name}</span>
                       <span><strong>Mobile:</strong> {selectedTicket?.mobile}</span>
                       {/* <span><strong>Email:</strong> {selectedTicket?.email}</span> */}
                     </div>
-                  </section>
+                  </section><br />
+                  <hr />
 
                   {/* Section 3: Department Info */}
                   <section className="space-y-4 border-b pb-4">
                     <h5 className="font-semibold">Departments</h5>
                     {selectedTicket?.department?.map((curElem, index) => (
-                      <div key={index}>
-                        <h6 className="font-bold">{curElem?.name}</h6>
-                        <p className="text-sm">{curElem?.description}</p>
-                      </div>
+                      // (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
+                      <>
+                        <div key={index} style={{ display: 'flex', gap: '5px' }}>
+                          <span className="font-bold">{curElem?.name}{curElem?.description && ':'}</span>
+                          {
+                            curElem?.users && curElem?.users?.length > 0 ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+                              {curElem?.users?.map(curElem => (
+                                <span>{curElem}</span>
+                              ))}
+                            </div> :
+                              <span>No Specific Member Involved.</span>
+                          }
+                        </div>
+                        <p className="text-sm" style={{ wordBreak: 'break-word' }} >{curElem?.description}</p>
+                      </>
                     ))}
-                  </section>
-
-                  {/* Section 4: Comments */}
-                  <section className="space-y-3 border-b pb-4">
-                    <h5 className="font-semibold">Comments ({selectedTicket?.comments?.length})</h5>
-                    {selectedTicket?.comments?.length > 0 ? (
-                      <div className="space-y-2">
-                        {selectedTicket?.comments?.map((comment) => (
-                          <div key={comment?.id} className="p-2 bg-gray-100 rounded">
-                            <p className="text-sm">{comment?.content}</p>
-                            <p className="text-xs text-muted">{formatDate(comment?.createdAt)}</p>
-                          </div>
+                    {/* <div style={{ display: 'flex', gap: '5px' }}>
+                      <span className="font-bold">
+                        {myDept?.name}{myDept?.description && ':'}</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+                        {myDept?.users?.map(curElem => (
+                          <span>{curElem}</span>
                         ))}
                       </div>
-                    ) : (
-                      <p className="text-muted">No comments yet.</p>
-                    )}
+                    </div>
+                    <p className="text-sm" style={{ wordBreak: 'break-word' }} >{myDept?.description}</p> */}
                   </section>
+                  <hr />
+                  {/* Section 4: Comments */}
+                  {
+                    selectedTicket?.comments?.length > 0 &&
+                    <button
+                      className="notification-btn"
+                      aria-label="Notifications"
+                      style={{ float: 'right' }} onClick={() => setIsCommentOpen(!isCommentOpen)}
+                    >
+                      <FontAwesomeIcon icon={faCommentDots} />
+                      {selectedTicket?.comments?.length > 0 && (
+                        <span className="notification-badge">{selectedTicket?.comments?.length}</span>
+                      )}
+                    </button>
+                  }
+
+                  {
+                    isCommentOpen &&
+                    <>
+                      <section className="space-y-3 border-b pb-4">
+                        <h5 className="font-semibold">Comments ({selectedTicket?.comments?.length})</h5>
+                        {selectedTicket?.comments?.length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedTicket?.comments?.map((comment) => (
+                              <div key={comment?.id} className="p-2 bg-gray-100 rounded">
+                                <p className="text-sm" style={{ wordBreak: 'break-word' }} >{comment?.content}</p>
+                                <p className="text-xs text-muted">{comment?.commenter} - {formatDate(comment?.createdAt)}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-muted">No comments yet.</p>
+                        )}
+                      </section> <hr />
+                    </>
+                  }
 
                   {/* Section 5: Reassign Ticket */}
-                  <section className="space-y-2">
+                  {/* <section className="space-y-2">
                     <h5 className="font-semibold">ReAssign Ticket</h5>
                     <div className="flex gap-2 flex-wrap items-center">
                       <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
@@ -1421,9 +1824,10 @@ function ManagerPanel({ user, view = 'branch' }) {
                       </select>
                       <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
                     </div>
-                  </section>
+                  </section> */}
 
                   {/* Section 6: Add Comment */}
+
                   <section className="space-y-2">
                     <label htmlFor="comment" className="form-label font-semibold">Add Comment</label>
                     <textarea

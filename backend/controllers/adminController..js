@@ -5,8 +5,10 @@ import Manager from "../models/managerModel.js";
 import Notification from "../models/notificationModel.js";
 import UserRequests from "../models/reqModel.js";
 import TeamLeader from "../models/teamLeaderModel.js";
+import TicketSettings from "../models/ticketSetingsModel.js";
 import User from "../models/userModel.js";
 import bcrypt from 'bcryptjs'
+import UserEditRequests from "../models/userReqModel.js";
 
 export const addUser = async (req, res) => {
     try {
@@ -14,7 +16,7 @@ export const addUser = async (req, res) => {
         // const { username, email, password, mobile, branch, address, department, designation } = req.body;
 
         if (!req.body.username || !req.body.email || !req.body.name || !req.body.password || !req.body.mobile || !req.body.address) {
-            return res.status(401).json({
+            return res.status(400).json({
                 success: false,
                 message: 'Something is missing,Please cheack!'
             });
@@ -345,10 +347,38 @@ export const deleteUpdateRequest = async (req, res) => {
     }
 }
 
+export const deleteUserEditRequest = async (req, res) => {
+    try {
+
+        const id = req.params.id;
+        const request = await UserEditRequests.findByIdAndDelete(id);
+        if (request) {
+            return res.status(200).json({
+                success: true,
+                message: 'Request Deleted!'
+            });
+        }
+    } catch (error) {
+        console.log("while delete update request", error);
+    }
+}
+
 export const deleteUser = async (req, res) => {
+    // console.log('here');
     try {
         const id = req.params.id;
-        const request = await User.findByIdAndDelete(id);
+        let request;
+        request = await User.findByIdAndDelete(id);
+        if (!request) {
+            request = await TeamLeader.findByIdAndDelete(id);
+            await Department.updateOne({ teamleader: request.username }, { teamleader: '' })
+        }
+        if (!request) {
+            request = await Manager.findByIdAndDelete(id);
+        }
+        if (!request) {
+            request = await Admin.findByIdAndDelete(id);
+        }
         if (request) {
             return res.status(200).json({
                 success: true,
@@ -394,7 +424,7 @@ export const getDepartments = async (req, res) => {
             })
         }
         else {
-            return res.status(401).json({
+            return res.status(404).json({
                 success: false,
                 message: 'No Departmentes Available!'
             })
@@ -409,7 +439,8 @@ export const deleteDepartment = async (req, res) => {
         const id = req.params.id;
         const request = await Department.findByIdAndDelete(id);
         const departmentLength = await Department.countDocuments();
-        const updateBranch = await Branch.findOneAndUpdate({ name: req.body.branch }, { departments: departmentLength })
+        const updateTL = await TeamLeader.updateOne({ department: request.name }, { department: '' });
+        const updateBranch = await Branch.findOneAndUpdate({ name: req.body.branch }, { departments: departmentLength });
         if (request) {
             return res.status(200).json({
                 success: true,
@@ -499,5 +530,155 @@ export const getExecutives = async (req, res) => {
         });
     } catch (error) {
         console.log('While get all admins', error);
+    }
+}
+
+export const addTicketSettings = async (req, res) => {
+    try {
+        const { categories, priorities, adminId } = req.body;
+        const findObject = await TicketSettings.findOne({ adminId });
+        if (!findObject) {
+            if (categories || priorities) {
+                const data = TicketSettings({ categories: categories || [], priorities: priorities || [], adminId: adminId, branches: req.body.branches });
+                const savedData = await data.save();
+                if (savedData) {
+                    res.status(200).json({
+                        success: true,
+                        message: 'Ticket Settings Updated!'
+                    })
+                }
+                else {
+                    res.status(400).json({
+                        success: false,
+                        message: 'No Update Found!'
+                    })
+                }
+            }
+        }
+        else {
+            const updateFields = {};
+            if (categories) {
+                updateFields.categories = [...findObject.categories, categories];
+            }
+            if (priorities) {
+                updateFields.priorities = [...findObject.priorities, priorities];
+            }
+
+            if (Object.keys(updateFields).length > 0) {
+                await TicketSettings.updateOne({ adminId }, updateFields);
+                return res.status(200).json({
+                    success: true,
+                    message: 'Ticket Settings Updated!'
+                });
+            } else {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Nothing to update.'
+                });
+            }
+        }
+
+    } catch (error) {
+        console.log('while ticket settings', error);
+    }
+}
+
+export const getTicketSettings = async (req, res) => {
+    try {
+        const { branch } = req.params;
+        const ticketSettings = await TicketSettings.findOne({ branches: branch });
+        return res.status(200).json({
+            success: true,
+            ticketSettings
+        });
+    } catch (error) {
+        console.log('while geting ticket settings', error);
+    }
+}
+
+export const updateTicketSettings = async (req, res) => {
+    try {
+        const { adminId, categories, priorities, branches } = req.body;
+        const settingData = await TicketSettings.findOne({ adminId });
+        let updation = false;
+        if (categories) {
+            const categoryData = settingData.categories.filter(cat => cat._id === categories._id);
+            if (categories?.name && categories?.name !== categoryData?.name) {
+                await TicketSettings.updateOne(
+                    { adminId, "categories._id": categories._id },
+                    { $set: { "categories.$.name": categories.name } }
+                ); updation = true;
+            }
+            if (categories?.description && categories?.description !== categoryData?.description) {
+                await TicketSettings.updateOne(
+                    { adminId, "categories._id": categories._id },
+                    { $set: { "categories.$.description": categories.description } }
+                ); updation = true;
+            }
+        }
+        if (priorities) {
+            const priorityData = settingData.priorities.filter(cat => cat._id === priorities._id);
+            if (priorities?.name && priorities?.name !== priorityData?.name) {
+                await TicketSettings.updateOne(
+                    { adminId, "priorities._id": priorities._id },
+                    { $set: { "priorities.$.name": priorities.name } }
+                ); updation = true;
+            }
+            if (priorities?.color && priorities?.color !== priorityData?.color) {
+                await TicketSettings.updateOne(
+                    { adminId, "priorities._id": priorities._id },
+                    { $set: { "priorities.$.color": priorities.color } }
+                ); updation = true;
+            }
+            if (priorities?.tat && priorities?.tat !== priorityData?.tat) {
+                await TicketSettings.updateOne(
+                    { adminId, "priorities._id": priorities._id },
+                    { $set: { "priorities.$.tat": priorities.tat } }
+                ); updation = true;
+            }
+        }
+        if (branches && branches !== settingData?.branches) {
+            await TicketSettings.updateOne({ adminId }, { branches: branches });
+            updation = true;
+        }
+        if (updation) {
+            return res.status(200).json({
+                success: true,
+                message: 'Ticket Settings Updated Successfully!'
+            })
+        }
+        else {
+            return res.status(400).json({
+                success: false,
+                message: 'No Updates Found!'
+            })
+        }
+    } catch (error) {
+        console.log('while update ticket settings', error);
+    }
+}
+
+export const deleteTicketSettings = async (req, res) => {
+    try {
+        const { adminId, categories, priorities } = req.body;
+        const settingData = await TicketSettings.findOne({ adminId });
+        if (categories) {
+            const deletedCategory = settingData.categories.filter(cat => cat._id.toString() !== categories);
+            await TicketSettings.updateOne({ adminId }, { categories: deletedCategory });
+            return res.status(200).json({
+                success: true,
+                message: 'Category Deleted!'
+            })
+        }
+        else if (priorities) {
+            const deletedPriority = settingData.priorities.filter(pri => pri._id.toString() !== priorities);
+            await TicketSettings.updateOne({ adminId }, { priorities: deletedPriority });
+            return res.status(200).json({
+                success: true,
+                message: 'Priority Deleted!'
+            })
+        }
+    } catch (error) {
+        console.log('while delete ticket settings', error);
     }
 }

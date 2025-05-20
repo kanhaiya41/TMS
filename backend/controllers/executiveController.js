@@ -22,6 +22,13 @@ export const raiseTicket = async (req, res) => {
                 department: { $in: deptNames }
             });
 
+            const executiveUsernames = req.body.department.flatMap(dep => dep.users);
+
+            const executiveEmails = await User.find({
+                branch: req.body.branch,
+                username: { $in: executiveUsernames }
+            })
+
             const manageremail = await Manager.findOne({ branch: req.body.branch });
             //set nodemailer transport
             const transtporter = nodemailer.createTransport({
@@ -48,6 +55,23 @@ export const raiseTicket = async (req, res) => {
             await transtporter.sendMail(mailBody);
 
             await Promise.all(emails.map(async (curElem) => {
+                const mailBody = {
+                    from: process.env.USER_EMAIL,
+                    to: curElem.email,
+                    subject: 'New Ticket Raised in Your Department',
+                    html: `<p>
+                    Name: ${saveddata?.name} <br>
+                    Subject: ${saveddata?.subject} <br>
+                    Mobile: ${saveddata?.mobile} <br> 
+                    Email Address: ${saveddata?.email} <br>
+                    Priority: ${saveddata?.priority} <br>
+                    Description: ${saveddata?.department?.find(dept => dept?.name === curElem?.department)?.description || 'N/A'}
+                  </p>`,
+                };
+                await transtporter.sendMail(mailBody);
+            }));
+
+            await Promise.all(executiveEmails.map(async (curElem) => {
                 const mailBody = {
                     from: process.env.USER_EMAIL,
                     to: curElem.email,
@@ -105,8 +129,7 @@ export const updateTicketStatus = async (req, res) => {
         if (!executive) {
             executive = await TeamLeader.findOne({ username: ticket?.issuedby });
         }
-        if(!executive)
-        {
+        if (!executive) {
             executive = await Manager.findOne({ username: ticket?.issuedby });
         }
         if (status === 'resolved') {

@@ -522,7 +522,7 @@
   overflow-y: auto;
   outline: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
@@ -606,6 +606,8 @@
   color: var(--color-text);
   background-color: var(--glass-background);
 }
+
+
 
 @media (min-width: 576px) {
   .modal-dialog {

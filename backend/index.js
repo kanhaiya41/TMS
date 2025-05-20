@@ -9,14 +9,21 @@ import adminApp from './routes/adminRoute.js';
 import executiveApp from './routes/executiveRoute.js'
 import notificationApp from './routes/notificationRoute.js';
 import path from 'path';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(cors(
+    {
+    origin: process.env.URI,
+    credentials: true
+}
+));
 
 app.use(express.json());
+app.use(cookieParser());
 
 
 dbConnect();
