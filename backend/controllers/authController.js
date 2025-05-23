@@ -263,6 +263,13 @@ export const superAdminSignUp = async (req, res) => {
     try {
         const { username, email, password, mobile, branch, address, department, designation } = req.body;
         let imageUrl;
+        const Existuser = await SuperAdmin.findOne({ designation: designation });
+        if (Existuser) {
+            return res.status(400).json({
+                success: false,
+                message: 'User Already Created Please Reload!'
+            });
+        }
         if (req.file) {
             imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
         }
