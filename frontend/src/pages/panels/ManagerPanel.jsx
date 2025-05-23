@@ -15,6 +15,8 @@ import axios from 'axios';
 import URI from '../../utills';
 import toast from 'react-hot-toast';
 import SessionEndWarning from '../../components/SessionEndWarning';
+import { useDispatch } from 'react-redux';
+import { setNotificationCount } from '../../Redux/userSlice';
 
 function ManagerPanel({ user, view = 'branch' }) {
   const [branch, setBranch] = useState(null);
@@ -35,7 +37,6 @@ function ManagerPanel({ user, view = 'branch' }) {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [reAssignto, setReAssignto] = useState('');
   const [department, setDepartment] = useState(null);
   const [comment, setComment] = useState('');
   const [isCommentOpen, setIsCommentOpen] = useState(false);
@@ -44,6 +45,52 @@ function ManagerPanel({ user, view = 'branch' }) {
 
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [reAssignDiv, setReAssignDiv] = useState(false);
+  const [showPriorityUpdate, setShowPriorityUpdate] = useState(false);
+  const [newPriority, setNewPriority] = useState('');
+  const [reAssignto, setReAssignto] = useState({
+    name: '',
+    description: '',
+    users: []
+  });
+  const [loadingP, setLoadingP] = useState(false);
+  const [loadingR, setLoadingR] = useState(false);
+
+  const handlePriorityUpdate = async () => {
+
+    try {
+      setLoadingP(true);
+      const data = `Priority changed from ${selectedTicket?.priority} to ${newPriority}`;
+      addCommentOnTicket(data, '');
+      const tat = ticketSettings?.priorities?.find(p => p.name === newPriority).tat;
+      const res = await axios.post(`${URI}/executive/updatepriority`, { id: selectedTicket?._id, priority: newPriority, tat }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchAllTickets();
+        toast.success(r?.data?.message);
+        setShowPriorityUpdate(false);
+        setIsModalOpen(false);
+        setNewPriority('');
+
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while updating priority', error);
+    }
+    finally {
+      setLoadingP(false);
+    }
+  }
 
   //fetching APIs
   //fetch team leaders
@@ -270,7 +317,7 @@ function ManagerPanel({ user, view = 'branch' }) {
       const sec = Math.floor((remaining / 1000) % 60);
       return `Remaining: ${days > 0 ? `${days}d ` : ''
         }${hrs > 0 ? `${hrs}h ` : ''
-        }${mins > 0 ? `${mins}m` : ''
+        }${!hrs > 0 && mins > 0 ? `${mins}m` : ''
         }${!mins > 0 ? `${sec}s` : ''}`.trim();
     }
   };
@@ -389,19 +436,24 @@ function ManagerPanel({ user, view = 'branch' }) {
     setIsModalOpen(false);
     setSelectedTicket(null);
     setIsCommentOpen(false);
+    setReAssignDiv(false);
+    setShowPriorityUpdate(false);
   };
 
   //add comment on ticket
-  const addCommentOnTicket = async () => {
+  const addCommentOnTicket = async (data, ticketIdd) => {
+
     try {
-      const ticketId = selectedTicket?._id;
-      const commenter = `${user?.username}(${user?.department && user?.department ? ' - ' : ''}  ${user?.designation})`;
-      if (comment) {
-        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
+      const ticketId = ticketIdd || selectedTicket?._id;
+      const commentData = data || comment;
+      const commenter = `${user?.username}(${user?.department ? user?.department + ' - ' : ''}  ${user?.designation})`;
+      if (commentData) {
+        // console.log('comment', commentData)
+        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment: commentData, commenter }, {
           headers: {
             'Content-Type': 'application/json'
           },
-        withCredentials: true
+          withCredentials: true
         }).then(res => {
           fetchAllTickets();
           handleCloseModal();
@@ -421,7 +473,7 @@ function ManagerPanel({ user, view = 'branch' }) {
         });
       }
       else {
-        toast.error('Please fill the Comment Box!');
+        toast.error('Plese fill the Comment Box!');
       }
     } catch (error) {
       console.log('error while adding comment', error);
@@ -436,14 +488,39 @@ function ManagerPanel({ user, view = 'branch' }) {
     setIsModalOpen(true);
   };
 
+  const handleCheckboxChange = (e) => {
+    const value = e.target.value;
+    const isChecked = e.target.checked;
+
+    if (isChecked) {
+      setReAssignto({
+        ...reAssignto,
+        users: [...(reAssignto?.users || []), value]
+      });
+    } else {
+      setReAssignto({
+        ...reAssignto,
+        users: (reAssignto.users || []).filter(us => us !== value)
+      });
+    }
+  };
+
   const reAssignTicket = async () => {
+    setLoadingR(true);
+    const data = `ReAssign the Ticket to ${reAssignto?.users > 0 ? reAssignto?.users + '-' : ''} ${reAssignto?.name}`;
     try {
-      if (reAssignto) {
-        const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto })
+      if (reAssignto.name !== '') {
+        addCommentOnTicket(data, '');
+        const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto }, { withCredentials: true })
           .then(res => {
             fetchAllTickets();
             handleCloseModal();
             toast.success(res?.data?.message);
+            setReAssignto({
+              name: '',
+              description: '',
+              users: []
+            })
           }).catch(err => {
             // Handle error and show toast
             if (err.response && err.response.data && err.response.data.message) {
@@ -452,6 +529,7 @@ function ManagerPanel({ user, view = 'branch' }) {
               toast.error("Something went wrong");
             }
           });
+
       }
       else {
         toast.error('Please Selcet a Department!')
@@ -460,10 +538,17 @@ function ManagerPanel({ user, view = 'branch' }) {
       console.log("while Re-Assigning the Ticket", error);
       toast.error('Error While Re-Assigning the Ticket', error);
     }
+    finally {
+      setLoadingR(false);
+    }
   }
 
   //update ticket status
   const handleUpdateTicketStatus = async (ticketId, status) => {
+
+    const data = `Ticket Status is ${status} Now`;
+
+    addCommentOnTicket(data, ticketId);
     try {
       setLoading({
         status: true,
@@ -498,6 +583,46 @@ function ManagerPanel({ user, view = 'branch' }) {
         status: false,
         id: ticketId
       });
+    }
+  }
+
+  const dispatch = useDispatch();
+  // const [notificationCount, setNotificationCount]
+
+  const resolveNotification = async (text) => {
+    try {
+      const payload = {
+        user: user?._id,
+        section: 'department'
+      }
+
+      const res = await axios.post(`${URI}/notification/resolvenotification`, payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        const obj = res?.data?.notificationObject;
+        const updatedNotificaton =
+          (obj?.department || 0) +
+          (obj?.users || 0) +
+          (obj?.tickets || 0) +
+          (obj?.passreq || 0) +
+          (obj?.userreq || 0) +
+          (obj?.profile || 0);
+        dispatch(setNotificationCount(updatedNotificaton));
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+
+
+
+    } catch (error) {
+      console.log('While resolve notification', error);
     }
   }
 
@@ -630,7 +755,7 @@ function ManagerPanel({ user, view = 'branch' }) {
 
   const renderBranchOverview = () => {
     const stats = getBranchStats();
-
+    resolveNotification();
     return (
       <>
         <div className="mb-4">
@@ -1717,6 +1842,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                         <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
                           selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`}
                           style={{ background: ticketSettings?.priorities?.find(p => p?.name === selectedTicket?.priority)?.color }}
+                          onClick={() => setShowPriorityUpdate(!showPriorityUpdate)}
                         >
                           {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
                         </span>
@@ -1729,6 +1855,47 @@ function ManagerPanel({ user, view = 'branch' }) {
                         {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
                       </span>
                     </div>
+                    {showPriorityUpdate && (
+                      <div className="absolute top-full left-0 mt-1 bg-white shadow-lg rounded-md p-2 z-50">
+                        <select
+                          className="form-select"
+                          value={newPriority}
+                          onChange={(e) => setNewPriority(e.target.value)}
+                        >
+                          <option value="">Select Priority</option>
+                          {
+                            ticketSettings?.priorities?.map(curElem => (
+                              <option value={curElem?.name}>{curElem?.name}</option>
+                            ))
+                          }
+
+                        </select>
+                        <div className="flex gap-2 mt-2">
+                          {
+                            loadingP ? <button className="btn btn-sm btn-primary">
+                              <img src="/img/loader.png" className='Loader' alt="loader" />
+                            </button>
+                              :
+                              <button
+                                className="btn btn-sm btn-primary"
+                                onClick={handlePriorityUpdate}
+                                disabled={!newPriority}
+                              >
+                                Update
+                              </button>
+                          }
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => {
+                              setShowPriorityUpdate(false);
+                              setNewPriority('');
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </section> <br />
                   <hr />
                   {/* Section 2: User Info */}
@@ -1811,20 +1978,43 @@ function ManagerPanel({ user, view = 'branch' }) {
                   }
 
                   {/* Section 5: Reassign Ticket */}
-                  {/* <section className="space-y-2">
-                    <h5 className="font-semibold">ReAssign Ticket</h5>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
-                        <option value="" disabled>ReAssign the Ticket</option>
-                        {department?.map((curElem, index) => (
-                          user?.department !== curElem?.name && (
-                            <option key={index} value={curElem?.name}>{curElem?.name}</option>
-                          )
-                        ))}
-                      </select>
-                      <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
-                    </div>
-                  </section> */}
+                  <section className="space-y-2">
+                    <h5 className="btn btn-primary" onClick={() => setReAssignDiv(!reAssignDiv)} >ReAssign Ticket</h5>
+                    {
+                      reAssignDiv &&
+                      <div className="flex gap-2 flex-wrap items-left" style={{ flexDirection: 'column' }}>
+                        <select className="form-select" onChange={(e) => setReAssignto({ ...reAssignto, name: e.target.value })} defaultValue="">
+                          <option value="" disabled>ReAssign the Ticket</option>
+                          {departments?.map((curElem, index) => (
+                            !selectedTicket?.department?.some(dept => dept.name === curElem?.name) && (
+                              <option key={index} value={curElem?.name}>{curElem?.name}</option>
+                            )
+                          ))}
+                        </select>
+                        <div className='deptcheckbox' style={{ background: 'none' }}>
+                          {
+                            executives?.map(exe => (
+                              exe?.department === reAssignto.name &&
+                              <span >{exe?.username} <input value={exe?.username} onChange={handleCheckboxChange} type="checkbox" /> </span>
+                            ))
+                          }
+
+                        </div>
+                        <textarea className='form-control'
+                          placeholder='Description'
+                          onChange={(e) => setReAssignto({ ...reAssignto, description: e.target.value })}
+                          name="" id=""></textarea>
+                        {
+                          loadingR ? <button className="btn btn-primary">
+                            <img src="/img/loader.png" className='Loader' alt="loader" />
+                          </button>
+                            :
+                            <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
+                        }
+                      </div>
+                    }
+
+                  </section>
 
                   {/* Section 6: Add Comment */}
 
@@ -1845,7 +2035,7 @@ function ManagerPanel({ user, view = 'branch' }) {
                 {/* Footer */}
                 <div className="modal-footer">
                   <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
-                  <button className="btn btn-primary" onClick={addCommentOnTicket}>Add Comment</button>
+                  <button className="btn btn-primary" onClick={() => addCommentOnTicket('', '')}>Add Comment</button>
                 </div>
 
               </div>

@@ -417,13 +417,17 @@ function UserProfile() {
                 {user?.branches && (
                   <div>
                     <p className="font-medium">Your Branches</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-evenly', marginLeft: '20%', width: '100%' }}>
+                    {
+                      user?.branches.length >0 ?
+                      <div style={{ display: 'flex', justifyContent: 'space-evenly', marginLeft: '20%', width: '100%' }}>
                       {
                         user?.branches?.map((curElem, index) => (
                           <p className="text-sm text-muted">{index + 1}. {curElem}</p>
                         ))
                       }
-                    </div>
+                    </div> : 'No Branches Assigned Yet!'
+                    }
+                    
 
                   </div>
                 )}
@@ -464,8 +468,6 @@ function UserProfile() {
                   />
                   {errors.email && <div className="text-error text-sm mt-1">{errors.email}</div>}
                 </div>
-
-
 
                 <div className="form-group">
                   <label htmlFor="mobile" className="form-label">Mobile Number</label>

@@ -155,6 +155,10 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
       toast.error('Password must have at least 6 letters!')
       return false;
     }
+    else if (designation === 'Manager' && !formData.branch) {
+      toast.error('Branch is Required!');
+      return false;
+    }
     else {
       let hasLetter = false;
       let hasNumber = false;
@@ -220,7 +224,9 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
     try {
       setLoading(true);
       let validation = passValidation();
+
       if (validation) {
+
         const formdata = new FormData();
         formdata.append('username', formData?.username);
         formdata.append('email', formData?.email);
@@ -500,21 +506,37 @@ function UserForm({ designation, onCancel, initialData = null, fetchAllUsers, pa
           <div className="form-group">
             <label htmlFor="branch" className="form-label">Branch</label>
             {
-              (branches && branches.length > 0) ?
-                <div className='deptcheckbox'>
-                  {
-                    branches?.map((curElem) => (
-                      <>
-                        {
-                          (curElem?.admin !== '' || !curElem?.admin) &&
-                          <p>{curElem?.name} <input type="checkbox" value={curElem?.name} onChange={handleCheckboxChange} name='department' /></p>
-                        }
-                      </>
-                    ))
+              (branches && branches.length > 0) ? (
+                (() => {
+                  const notAssignedBranches = branches.find(br => br.admin === '');
+                  if (!notAssignedBranches) {
+                    return <p>No branches to Assign!</p>;
                   }
-                </div> :
-                'No branches to Assign!'
+                  return (
+                    <div className='deptcheckbox'>
+                      {
+                        branches.map((curElem) => (
+                          (curElem?.admin === '' || !curElem?.admin) && (
+                            <p key={curElem._id}>
+                              {curElem?.name}
+                              <input
+                                type="checkbox"
+                                value={curElem?.name}
+                                onChange={handleCheckboxChange}
+                                name='department'
+                              />
+                            </p>
+                          )
+                        ))
+                      }
+                    </div>
+                  );
+                })()
+              ) : (
+                <p>No branches to Assign!</p>
+              )
             }
+
 
             {errors?.branch && <div className="text-error text-sm mt-1">{errors?.branch}</div>}
           </div>

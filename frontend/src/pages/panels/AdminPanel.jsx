@@ -333,10 +333,11 @@ function AdminPanel({ view = 'departments' }) {
       const mins = Math.floor((remaining / 1000 / 60) % 60);
       const hrs = Math.floor((remaining / (1000 * 60 * 60)) % 24);
       const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const sec = Math.floor((remaining / 1000) % 60);
       return `Remaining: ${days > 0 ? `${days}d ` : ''
         }${hrs > 0 ? `${hrs}h ` : ''
-        }${mins > 0 ? `${mins}m` : ''
-        }`.trim();
+        }${!hrs > 0 && mins > 0 ? `${mins}m` : ''
+        }${!mins > 0 ? `${sec}s` : ''}`.trim();
     }
   };
 
@@ -1031,6 +1032,11 @@ function AdminPanel({ view = 'departments' }) {
       ).then(r => {
         fetchTicketSettings();
         setNewPriority({ name: '', color: '' });
+        setTat({
+          day: '',
+          hour: '',
+          mint: ''
+        })
         toast.success(r?.data?.message);
       }).catch(err => {
         // Handle error and show toast
@@ -1053,7 +1059,7 @@ function AdminPanel({ view = 'departments' }) {
   };
 
   const handleUpdatePriority = async () => {
-    if (!editingPriority || !editingPriority.name.trim() || !editingPriority.color.trim() || (!tat.day && !tat.hour && !tat.mint)) {
+    if (!editingPriority || !editingPriority.name.trim() || !editingPriority.color.trim() || (!editingTat.day && !editingTat.hour && !editingTat.mint)) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -1338,6 +1344,52 @@ function AdminPanel({ view = 'departments' }) {
                           name: e.target.value
                         })}
                       />
+                      <label htmlFor="status-filter" className="form-label">Turn Around Time</label>
+                      <div className="mb-2 d-flex gap-2" style={{ display: 'flex', width: '100%' }}>
+                        {
+                          !editingTat?.hour && !editingTat?.mint &&
+                          <select name="" id=""
+                            className="form-control mb-2"
+                            onChange={(e) => setEditingTat({ day: e.target.value })}
+                          >
+                            <option value="" selected disabled>Days</option>
+                            {
+                              days?.map(curElem => (
+                                <option value={curElem}>{curElem}</option>
+                              ))
+                            }
+                          </select>
+                        }
+                        {
+                          !editingTat?.day && !editingTat?.mint &&
+                          <select name="" id=""
+                            className="form-control mb-2"
+                            onChange={(e) => setEditingTat({ hour: e.target.value })}
+                          >
+                            <option value="" selected disabled>Hours</option>
+                            {
+                              hours?.map(curElem => (
+                                <option value={curElem}>{curElem}</option>
+                              ))
+                            }
+                          </select>
+                        }
+                        {
+                          !editingTat?.hour && !editingTat?.day &&
+                          <select name="" id=""
+                            className="form-control mb-2"
+                            onChange={(e) => setEditingTat({ mint: e.target.value })}
+                          >
+                            <option value="" selected disabled>Minutes</option>
+                            {
+                              Array.from({ length: 60 }, (_, i) => i + 1).map(curElem => (
+                                <option value={`${curElem} minutes`}>{curElem} minutes</option>
+                              ))
+                            }
+                          </select>
+                        }
+                      </div>
+                      <label htmlFor="color" className="form-label">Select the Color</label>
                       <input
                         type="color"
                         className="form-control mb-2"

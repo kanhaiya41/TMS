@@ -17,16 +17,54 @@ function ExecutivePanel({ user, view = 'tickets' }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [reAssignto, setReAssignto] = useState('');
+  const [showPriorityUpdate, setShowPriorityUpdate] = useState(false);
+  const [newPriority, setNewPriority] = useState('');
+  const [reAssignto, setReAssignto] = useState({
+    name: '',
+    description: '',
+    users: []
+  });
   const [department, setDepartment] = useState(null);
   const [comment, setComment] = useState('');
   const [isCommentOpen, setIsCommentOpen] = useState(false);
+  const [reAssignDiv, setReAssignDiv] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState();
   const [sessionWarning, setSessionWarning] = useState(false);
+
+  const handlePriorityUpdate = async () => {
+    try {
+      const data = `Priority changed from ${selectedTicket?.priority} to ${newPriority}`;
+
+      addCommentOnTicket(data,'');
+      const tat = ticketSettings?.priorities?.find(p => p.name === newPriority).tat;
+      const res = await axios.post(`${URI}/executive/updatepriority`, { id: selectedTicket?._id, priority: newPriority, tat }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchAllTickets();
+        toast.success(r?.data?.message);
+        setShowPriorityUpdate(false);
+        setIsModalOpen(false);
+        setNewPriority('');
+
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while updating priority', error);
+    }
+  }
 
   const fetchAllTickets = async () => {
     try {
@@ -109,6 +147,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
   useEffect(() => {
     fetchAllTickets();
     fetchDepartment();
+    fetchAllUsers();
   }, []);
 
   const [myDept, setMyDept] = useState({});
@@ -123,6 +162,8 @@ function ExecutivePanel({ user, view = 'tickets' }) {
     setIsModalOpen(false);
     setSelectedTicket(null);
     setIsCommentOpen(false);
+    setReAssignDiv(false);
+    setShowPriorityUpdate(false);
   };
 
   const filteredTickets = tickets.filter(ticket => {
@@ -179,10 +220,11 @@ function ExecutivePanel({ user, view = 'tickets' }) {
       const mins = Math.floor((remaining / 1000 / 60) % 60);
       const hrs = Math.floor((remaining / (1000 * 60 * 60)) % 24);
       const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const sec = Math.floor((remaining / 1000) % 60);
       return `Remaining: ${days > 0 ? `${days}d ` : ''
         }${hrs > 0 ? `${hrs}h ` : ''
-        }${mins > 0 ? `${mins}m` : ''
-        }`.trim();
+        }${!hrs > 0 && mins > 0 ? `${mins}m` : ''
+        }${!mins > 0 ? `${sec}s` : ''}`.trim();
     }
   };
 
@@ -216,14 +258,40 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
   }
 
+  const handleCheckboxChange = (e) => {
+    const value = e.target.value;
+    const isChecked = e.target.checked;
+
+    if (isChecked) {
+      setReAssignto({
+        ...reAssignto,
+        users: [...(reAssignto?.users || []), value]
+      });
+    } else {
+      setReAssignto({
+        ...reAssignto,
+        users: (reAssignto.users || []).filter(us => us !== value)
+      });
+    }
+  };
+
+
   const reAssignTicket = async () => {
+    const data = `ReAssign the Ticket to ${reAssignto?.users > 0 ? reAssignto?.users + '-' : ''} ${reAssignto?.name}`;
+
     try {
-      if (reAssignto) {
-        const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto })
+      if (reAssignto.name !== '') {
+        addCommentOnTicket(data,'');
+        const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto }, { withCredentials: true })
           .then(res => {
             fetchAllTickets();
             handleCloseModal();
             toast.success(res?.data?.message);
+            setReAssignto({
+              name: '',
+              description: '',
+              users: []
+            })
           }).catch(err => {
             // Handle error and show toast
             if (err.response && err.response.data && err.response.data.message) {
@@ -232,6 +300,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
               toast.error("Something went wrong");
             }
           });
+
       }
       else {
         toast.error('Please Selcet a Department!')
@@ -243,12 +312,15 @@ function ExecutivePanel({ user, view = 'tickets' }) {
   }
 
   //add comment on ticket
-  const addCommentOnTicket = async () => {
+  const addCommentOnTicket = async (data, ticketIdd) => {
+
     try {
-      const ticketId = selectedTicket?._id;
+      const ticketId = ticketIdd || selectedTicket?._id;
+      const commentData = data || comment;
       const commenter = `${user?.username}(${user?.department ? user?.department + ' - ' : ''}  ${user?.designation})`;
-      if (comment) {
-        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
+      if (commentData) {
+        // console.log('comment', commentData)
+        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment: commentData, commenter }, {
           headers: {
             'Content-Type': 'application/json'
           },
@@ -281,6 +353,10 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
   //update ticket status
   const handleUpdateTicketStatus = async (ticketId, status) => {
+
+    const data = `Ticket Status is ${status} Now`;
+
+    addCommentOnTicket(data, ticketId);
     try {
       setLoading({
         status: true,
@@ -315,6 +391,30 @@ function ExecutivePanel({ user, view = 'tickets' }) {
         status: false,
         id: ticketId
       });
+    }
+  }
+
+  const [executives, setExecutives] = useState();
+
+  //fetch users
+  const fetchAllUsers = async () => {
+    try {
+      const res = await axios.get(`${URI}/admin/executives`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }).then(res => {
+        setExecutives(res?.data?.allBranchesData?.filter((exec) => exec?.branch === user?.branch));
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log("while fetching all Users data", error);
     }
   }
 
@@ -432,9 +532,9 @@ function ExecutivePanel({ user, view = 'tickets' }) {
               )}
             </div>
           </div>
-
+          <br />
           <div className="card">
-            <h2 className="text-xl font-bold">Tickets on Your Department</h2>
+            <h2 className="text-xl font-bold">Tickets on You</h2>
             <div className="card-body p-0">
               {filteredTickets?.length > 0 ? (
                 <div className="table-responsive">
@@ -718,9 +818,11 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                         <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
                           selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`}
                           style={{ background: ticketSettings?.priorities?.find(p => p?.name === selectedTicket?.priority)?.color }}
+                          onClick={() => setShowPriorityUpdate(!showPriorityUpdate)}
                         >
                           {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
                         </span>
+
                         <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
                           selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`} style={{ background: selectedTicket?.tat && tatBG(selectedTicket?.tat, selectedTicket?.createdAt) }}>
                           {selectedTicket?.tat && formatTat(selectedTicket?.tat, selectedTicket?.createdAt)}
@@ -730,6 +832,41 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                         {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
                       </span>
                     </div>
+                    {showPriorityUpdate && (
+                      <div className="absolute top-full left-0 mt-1 bg-white shadow-lg rounded-md p-2 z-50">
+                        <select
+                          className="form-select"
+                          value={newPriority}
+                          onChange={(e) => setNewPriority(e.target.value)}
+                        >
+                          <option value="">Select Priority</option>
+                          {
+                            ticketSettings?.priorities?.map(curElem => (
+                              <option value={curElem?.name}>{curElem?.name}</option>
+                            ))
+                          }
+
+                        </select>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={handlePriorityUpdate}
+                            disabled={!newPriority}
+                          >
+                            Update
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => {
+                              setShowPriorityUpdate(false);
+                              setNewPriority('');
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </section> <br />
                   <hr />
                   {/* Section 2: User Info */}
@@ -753,20 +890,45 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
                       </div>
                     ))} */}
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                      <span className="font-bold">
-                        {myDept?.name}{myDept?.description && ':'}</span>
-                      {
-                        myDept?.users && myDept?.users?.length > 0 ?
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
-                            {myDept?.users?.map(curElem => (
-                              <span>{curElem}</span>
-                            ))}
-                          </div> :
-                          <span>No Specific Member Involved.</span>
-                      }
-                    </div>
-                    <p className="text-sm" style={{ wordBreak: 'break-word' }} >{myDept?.description}</p>
+                    {
+                      selectedTicket?.issuedby !== user?.username ?
+                        <>
+                          <div style={{ display: 'flex', gap: '5px' }}>
+                            <span className="font-bold">
+                              {myDept?.name}{myDept?.description && ':'}</span>
+                            {
+                              myDept?.users && myDept?.users?.length > 0 ?
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+                                  {myDept?.users?.map(curElem => (
+                                    <span>{curElem}</span>
+                                  ))}
+                                </div> :
+                                <span>No Specific Member Involved.</span>
+                            }
+                          </div>
+                          <p className="text-sm" style={{ wordBreak: 'break-word' }} >{myDept?.description}</p>
+                        </> :
+                        <>
+                          {selectedTicket?.department?.map((curElem, index) => (
+                            // (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
+                            <>
+                              <div key={index} style={{ display: 'flex', gap: '5px' }}>
+                                <span className="font-bold">{curElem?.name}{curElem?.description && ':'}</span>
+                                {
+                                  curElem?.users && curElem?.users?.length > 0 ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+                                    {curElem?.users?.map(curElem => (
+                                      <span>{curElem}</span>
+                                    ))}
+                                  </div> :
+                                    <span>No Specific Member Involved.</span>
+                                }
+                              </div>
+                              <p className="text-sm" style={{ wordBreak: 'break-word' }} >{curElem?.description}</p>
+                            </>
+                          ))}
+                        </>
+                    }
+
                   </section>
                   <hr />
                   {/* Section 4: Comments */}
@@ -806,20 +968,37 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                   }
 
                   {/* Section 5: Reassign Ticket */}
-                  {/* <section className="space-y-2">
-                    <h5 className="font-semibold">ReAssign Ticket</h5>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
-                        <option value="" disabled>ReAssign the Ticket</option>
-                        {department?.map((curElem, index) => (
-                          user?.department !== curElem?.name && (
-                            <option key={index} value={curElem?.name}>{curElem?.name}</option>
-                          )
-                        ))}
-                      </select>
-                      <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
-                    </div>
-                  </section> */}
+                  <section className="space-y-2">
+                    <h5 className="btn btn-primary" onClick={() => setReAssignDiv(!reAssignDiv)} >ReAssign Ticket</h5>
+                    {
+                      reAssignDiv &&
+                      <div className="flex gap-2 flex-wrap items-left" style={{ flexDirection: 'column' }}>
+                        <select className="form-select" onChange={(e) => setReAssignto({ ...reAssignto, name: e.target.value })} defaultValue="">
+                          <option value="" disabled>ReAssign the Ticket</option>
+                          {department?.map((curElem, index) => (
+                            !selectedTicket?.department?.some(dept => dept.name === curElem?.name) && (
+                              <option key={index} value={curElem?.name}>{curElem?.name}</option>
+                            )
+                          ))}
+                        </select>
+                        <div className='deptcheckbox' style={{ background: 'none' }}>
+                          {
+                            executives?.map(exe => (
+                              exe?.department === reAssignto.name &&
+                              <span >{exe?.username} <input value={exe?.username} onChange={handleCheckboxChange} type="checkbox" /> </span>
+                            ))
+                          }
+
+                        </div>
+                        <textarea className='form-control'
+                          placeholder='Description'
+                          onChange={(e) => setReAssignto({ ...reAssignto, description: e.target.value })}
+                          name="" id=""></textarea>
+                        <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
+                      </div>
+                    }
+
+                  </section>
 
                   {/* Section 6: Add Comment */}
 
@@ -840,7 +1019,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                 {/* Footer */}
                 <div className="modal-footer">
                   <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
-                  <button className="btn btn-primary" onClick={addCommentOnTicket}>Add Comment</button>
+                  <button className="btn btn-primary" onClick={() => addCommentOnTicket('','')}>Add Comment</button>
                 </div>
 
               </div>

@@ -270,10 +270,11 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       const mins = Math.floor((remaining / 1000 / 60) % 60);
       const hrs = Math.floor((remaining / (1000 * 60 * 60)) % 24);
       const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const sec = Math.floor((remaining / 1000) % 60);
       return `Remaining: ${days > 0 ? `${days}d ` : ''
         }${hrs > 0 ? `${hrs}h ` : ''
-        }${mins > 0 ? `${mins}m` : ''
-        }`.trim();
+        }${!hrs > 0 && mins > 0 ? `${mins}m` : ''
+        }${!mins > 0 ? `${sec}s` : ''}`.trim();
     }
   };
 
@@ -307,7 +308,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
   }
 
   const handleEditBranch = (branchId) => {
-    const branchToEdit = branches.find(branch => branch.id === branchId);
+    const branchToEdit = branches.find(branch => branch._id === branchId);
     setSelectedBranch(branchToEdit);
     setShowBranchForm(true);
   };
@@ -743,7 +744,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                         const branchDepartments = departments.filter(d => d?.branch === branch?.name);
 
                         return (
-                          <tr key={branch.id}>
+                          <tr key={branch._id}>
                             <td className="font-medium">{branch?.name}</td>
                             <td>{branch.location}</td>
                             <td>
@@ -760,7 +761,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                               <div className="flex gap-2">
                                 <button
                                   className="btn btn-sm btn-outline"
-                                  onClick={() => handleEditBranch(branch.id)}
+                                  onClick={() => handleEditBranch(branch._id)}
                                 >
                                   Edit
                                 </button>

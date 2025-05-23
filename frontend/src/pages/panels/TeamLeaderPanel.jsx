@@ -38,14 +38,51 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
   const [allRequests, setAllRequests] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
-  const [reAssignto, setReAssignto] = useState('');
   const [userRequest, setUserRequest] = useState();
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [loading, setLoading] = useState();
   const [sessionWarning, setSessionWarning] = useState(false);
-
+  const [reAssignDiv, setReAssignDiv] = useState(false);
+  const [showPriorityUpdate, setShowPriorityUpdate] = useState(false);
+  const [newPriority, setNewPriority] = useState('');
+  const [reAssignto, setReAssignto] = useState({
+    name: '',
+    description: '',
+    users: []
+  });
 
   const navigate = useNavigate();
+
+  const handlePriorityUpdate = async () => {
+    try {
+      const data = `Priority changed from ${selectedTicket?.priority} to ${newPriority}`;
+
+      addCommentOnTicket(data, '');
+      const tat = ticketSettings?.priorities?.find(p => p.name === newPriority).tat;
+      const res = await axios.post(`${URI}/executive/updatepriority`, { id: selectedTicket?._id, priority: newPriority, tat }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchAllTickets();
+        toast.success(r?.data?.message);
+        setShowPriorityUpdate(false);
+        setIsModalOpen(false);
+        setNewPriority('');
+
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data && err.response.data.message) {
+          toast.error(err.response.data.message); // For 400, 401, etc.
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while updating priority', error);
+    }
+  }
 
   const [stats, setStats] = useState({
     // totalBranches: 0,
@@ -181,7 +218,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setAllUsers(res?.data?.allBranchesData?.filter((exec) => exec?.branch === user?.branch && exec?.department === user?.department));
+        setAllUsers(res?.data?.allBranchesData?.filter((exec) => exec?.branch === user?.branch));
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -242,6 +279,8 @@ function TeamLeaderPanel({ view = 'executives' }) {
     setIsModalOpen(false);
     setSelectedTicket(null);
     setIsCommentOpen(false);
+    setReAssignDiv(false);
+    setShowPriorityUpdate(false);
   };
 
   const formatDate = (dateString) => {
@@ -291,10 +330,11 @@ function TeamLeaderPanel({ view = 'executives' }) {
       const mins = Math.floor((remaining / 1000 / 60) % 60);
       const hrs = Math.floor((remaining / (1000 * 60 * 60)) % 24);
       const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+      const sec = Math.floor((remaining / 1000) % 60);
       return `Remaining: ${days > 0 ? `${days}d ` : ''
         }${hrs > 0 ? `${hrs}h ` : ''
-        }${mins > 0 ? `${mins}m` : ''
-        }`.trim();
+        }${!hrs > 0 && mins > 0 ? `${mins}m` : ''
+        }${!mins > 0 ? `${sec}s` : ''}`.trim();
     }
   };
 
@@ -398,6 +438,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
   // Filter executives based on search term
   const filteredExecutives = allUsers?.filter(exec =>
+    exec?.department === user?.department &&
     exec?.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
     exec?.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
     exec?.address?.toLowerCase().includes(searchTerm?.toLowerCase())
@@ -431,6 +472,10 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
   //update ticket status
   const handleUpdateTicketStatus = async (ticketId, status) => {
+
+    const data = `Ticket Status is ${status} Now`;
+
+    addCommentOnTicket(data, ticketId);
     try {
       setLoading({
         status: true,
@@ -456,6 +501,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           toast.error("Something went wrong");
         }
       });
+
     } catch (error) {
       console.log('error while ticket updation', error);
     }
@@ -468,33 +514,36 @@ function TeamLeaderPanel({ view = 'executives' }) {
   }
 
   //add comment on ticket
-  const addCommentOnTicket = async () => {
+  const addCommentOnTicket = async (data, ticketIdd) => {
+
     try {
-      const ticketId = selectedTicket?._id;
+      const ticketId = ticketIdd || selectedTicket?._id;
+      const commentData = data || comment;
       const commenter = `${user?.username}(${user?.department ? user?.department + ' - ' : ''}  ${user?.designation})`;
-      if (comment) {
-        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment, commenter }, {
+      if (commentData) {
+        // console.log('comment', commentData)
+        const res = await axios.post(`${URI}/executive/addcommentonticket`, { ticketId, comment: commentData, commenter }, {
           headers: {
             'Content-Type': 'application/json'
           },
-        withCredentials: true
+          withCredentials: true
         }).then(res => {
           fetchAllTickets();
           handleCloseModal();
           setComment('');
           toast.success(res?.data?.message);
         }).catch(err => {
-        // Handle error and show toast
-        if (err.response && err.response.data) {
-          if (err.response.data.notAuthorized) {
-            setSessionWarning(true);
+          // Handle error and show toast
+          if (err.response && err.response.data) {
+            if (err.response.data.notAuthorized) {
+              setSessionWarning(true);
+            } else {
+              toast.error(err.response.data.message || "Something went wrong");
+            }
           } else {
-            toast.error(err.response.data.message || "Something went wrong");
+            toast.error("Something went wrong");
           }
-        } else {
-          toast.error("Something went wrong");
-        }
-      });
+        });
       }
       else {
         toast.error('Plese fill the Comment Box!');
@@ -504,14 +553,39 @@ function TeamLeaderPanel({ view = 'executives' }) {
     }
   }
 
+  const handleCheckboxChange = (e) => {
+    const value = e.target.value;
+    const isChecked = e.target.checked;
+
+    if (isChecked) {
+      setReAssignto({
+        ...reAssignto,
+        users: [...(reAssignto?.users || []), value]
+      });
+    } else {
+      setReAssignto({
+        ...reAssignto,
+        users: (reAssignto.users || []).filter(us => us !== value)
+      });
+    }
+  };
+
   const reAssignTicket = async () => {
+    const data = `ReAssign the Ticket to ${reAssignto?.users > 0 ? reAssignto?.users + '-' : ''} ${reAssignto?.name}`;
+
     try {
-      if (reAssignto) {
-        const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto })
+      if (reAssignto.name !== '') {
+        addCommentOnTicket(data, '');
+        const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto }, { withCredentials: true })
           .then(res => {
             fetchAllTickets();
             handleCloseModal();
             toast.success(res?.data?.message);
+            setReAssignto({
+              name: '',
+              description: '',
+              users: []
+            })
           }).catch(err => {
             // Handle error and show toast
             if (err.response && err.response.data && err.response.data.message) {
@@ -520,6 +594,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
               toast.error("Something went wrong");
             }
           });
+
       }
       else {
         toast.error('Please Selcet a Department!')
@@ -1604,6 +1679,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                         <span className={`badge ${selectedTicket?.priority === 'high' ? 'badge-error' :
                           selectedTicket?.priority === 'medium' ? 'badge-warning' : 'badge-primary'}`}
                           style={{ background: ticketSettings?.priorities?.find(p => p?.name === selectedTicket?.priority)?.color }}
+                          onClick={() => setShowPriorityUpdate(!showPriorityUpdate)}
                         >
                           {selectedTicket?.priority?.charAt(0).toUpperCase() + selectedTicket?.priority?.slice(1)}
                         </span>
@@ -1616,6 +1692,41 @@ function TeamLeaderPanel({ view = 'executives' }) {
                         {formatDate(selectedTicket?.createdAt)} , {formatTime(selectedTicket?.createdAt)}
                       </span>
                     </div>
+                    {showPriorityUpdate && (
+                      <div className="absolute top-full left-0 mt-1 bg-white shadow-lg rounded-md p-2 z-50">
+                        <select
+                          className="form-select"
+                          value={newPriority}
+                          onChange={(e) => setNewPriority(e.target.value)}
+                        >
+                          <option value="">Select Priority</option>
+                          {
+                            ticketSettings?.priorities?.map(curElem => (
+                              <option value={curElem?.name}>{curElem?.name}</option>
+                            ))
+                          }
+
+                        </select>
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={handlePriorityUpdate}
+                            disabled={!newPriority}
+                          >
+                            Update
+                          </button>
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => {
+                              setShowPriorityUpdate(false);
+                              setNewPriority('');
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </section> <br />
                   <hr />
                   {/* Section 2: User Info */}
@@ -1692,20 +1803,37 @@ function TeamLeaderPanel({ view = 'executives' }) {
                   }
 
                   {/* Section 5: Reassign Ticket */}
-                  {/* <section className="space-y-2">
-                    <h5 className="font-semibold">ReAssign Ticket</h5>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
-                        <option value="" disabled>ReAssign the Ticket</option>
-                        {department?.map((curElem, index) => (
-                          user?.department !== curElem?.name && (
-                            <option key={index} value={curElem?.name}>{curElem?.name}</option>
-                          )
-                        ))}
-                      </select>
-                      <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
-                    </div>
-                  </section> */}
+                  <section className="space-y-2">
+                    <h5 className="btn btn-primary" onClick={() => setReAssignDiv(!reAssignDiv)} >ReAssign Ticket</h5>
+                    {
+                      reAssignDiv &&
+                      <div className="flex gap-2 flex-wrap items-left" style={{ flexDirection: 'column' }}>
+                        <select className="form-select" onChange={(e) => setReAssignto({ ...reAssignto, name: e.target.value })} defaultValue="">
+                          <option value="" disabled>ReAssign the Ticket</option>
+                          {department?.map((curElem, index) => (
+                            !selectedTicket?.department?.some(dept => dept.name === curElem?.name) && (
+                              <option key={index} value={curElem?.name}>{curElem?.name}</option>
+                            )
+                          ))}
+                        </select>
+                        <div className='deptcheckbox' style={{ background: 'none' }}>
+                          {
+                            allUsers?.map(exe => (
+                              exe?.department === reAssignto.name &&
+                              <span >{exe?.username} <input value={exe?.username} onChange={handleCheckboxChange} type="checkbox" /> </span>
+                            ))
+                          }
+
+                        </div>
+                        <textarea className='form-control'
+                          placeholder='Description'
+                          onChange={(e) => setReAssignto({ ...reAssignto, description: e.target.value })}
+                          name="" id=""></textarea>
+                        <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
+                      </div>
+                    }
+
+                  </section>
 
                   {/* Section 6: Add Comment */}
 
@@ -1726,7 +1854,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                 {/* Footer */}
                 <div className="modal-footer">
                   <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
-                  <button className="btn btn-primary" onClick={addCommentOnTicket}>Add Comment</button>
+                  <button className="btn btn-primary" onClick={() => addCommentOnTicket('', '')}>Add Comment</button>
                 </div>
 
               </div>

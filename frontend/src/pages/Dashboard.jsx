@@ -19,6 +19,7 @@ import { setNotificationCount, setTheme, setUser } from '../Redux/userSlice';
 import axios from 'axios';
 import URI from '../utills';
 import toast from 'react-hot-toast';
+import SessionEndWarning from '../components/SessionEndWarning';
 
 function Dashboard() {
 
@@ -30,6 +31,9 @@ function Dashboard() {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [pageTitle, setPageTitle] = useState('Dashboard');
   // const [notificationCount, setNotificationCount] = useState(0);
+
+  const [sessionWarning, setSessionWarning] = useState(false);
+
 
   const fetchNotification = async () => {
     try {
@@ -50,8 +54,8 @@ function Dashboard() {
         payload.department = user?.department;
       }
 
-      console.log(payload);
-      console.log(user);
+      // console.log(payload);
+      // console.log(user);
       // else if(user?.designation)
 
       const res = await axios.post(`${URI}/notification/getnotification`, payload, {
@@ -68,7 +72,18 @@ function Dashboard() {
           (obj?.userreq || 0) +
           (obj?.profile || 0);
         dispatch(setNotificationCount(updatedNotificaton));
-      })
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
     } catch (error) {
       console.log('while fetching notificaton', error);
       toast.error('Error!');
@@ -415,6 +430,8 @@ function Dashboard() {
 
   return (
     <div className="dashboard">
+      {sessionWarning && <SessionEndWarning setSessionWarning={setSessionWarning} />}
+
       {/* Sidebar */}
       <aside className={`sidebar ${sidebarExpanded ? 'expanded' : ''}`}>
         <div className="sidebar-header">

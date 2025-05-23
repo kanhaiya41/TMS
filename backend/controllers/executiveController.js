@@ -149,11 +149,28 @@ export const updateTicketStatus = async (req, res) => {
                 html: `<p>Name: ${ticket?.name} <br>
                 Subject: ${ticket?.subject} <br>
                 Mobile: ${ticket?.mobile} <br> 
-                Email Address: ${ticket?.email} <br>
+                Category: ${ticket?.category} <br> 
                 Priority: ${ticket?.priority} <br>
                 ${ticket.department.map(dept =>
-                    `${dept?.name} : ${dept?.description} <br>`
+                    `${dept?.name} : ${dept?.description} <br>
+                    ${dept?.users?.map(user =>
+                        `${user} <br>`
+                    )}
+                    `
                 )}
+                Actions on Ticket: <br>
+                ${ticket?.comments?.map(comment =>
+                    `${comment?.content}-${comment?.commenter}-${new Date(comment.createdAt).toLocaleString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZone: 'Asia/Kolkata'
+                    })
+                    } <br>`
+                )}  
                 </p>`,
             };
             await transtporter.sendMail(mailBody);
@@ -172,6 +189,7 @@ export const updateTicketStatus = async (req, res) => {
 export const addCommentOnTicket = async (req, res) => {
     try {
         const { ticketId, comment, commenter } = req.body;
+        // console.log(req.body);
         const updated = await Tickets.findByIdAndUpdate(ticketId, {
             $push: { comments: { content: comment, commenter: commenter } }
         },
@@ -182,6 +200,11 @@ export const addCommentOnTicket = async (req, res) => {
                 success: true,
                 message: 'Comment Added!'
             })
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: 'No Comment Added!'
+            })
         }
     } catch (error) {
         console.log("while add comment on ticket", error);
@@ -190,14 +213,34 @@ export const addCommentOnTicket = async (req, res) => {
 
 export const reAssignTheTicket = async (req, res) => {
     try {
-        const ticket = await Tickets.findByIdAndUpdate(req.body.ticketId, { $push: { deptinvolve: { name: req.body.presentDept } }, department: req.body.reAssignto });
+        const ticket = await Tickets.findByIdAndUpdate(req.body.ticketId, { $push: { department: req.body.reAssignto } });
         if (ticket) {
             return res.status(200).json({
                 success: true,
-                message: `Ticket Assign to ${req.body.reAssignto}!`
+                message: `Ticket Assign to ${req.body.reAssignto.name}!`
             })
         }
     } catch (error) {
         console.log('while reassigning ticket', error);
+    }
+}
+
+export const updatePriority = async (req, res) => {
+    try {
+        const { id, priority, tat } = req.body;
+        const priorityy = await Tickets.findByIdAndUpdate(id, { priority, tat }, { new: true });
+        if (priorityy) {
+            return res.status(200).json({
+                success: true,
+                message: 'Priority Successfully Updated!'
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: 'Priority not Updated!'
+            });
+        }
+    } catch (error) {
+        console.log('while updating priority of ticket', error);
     }
 }

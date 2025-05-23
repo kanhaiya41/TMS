@@ -1,13 +1,28 @@
+import Admin from "../models/adminModel.js";
 import Manager from "../models/managerModel.js";
 import Notification from "../models/notificationModel.js";
+import SuperAdmin from "../models/superAdminModel.js";
 import TeamLeader from "../models/teamLeaderModel.js";
 import User from "../models/userModel.js";
 
 export const fetchNotifications = async (req, res) => {
     try {
 
-        const userObject = await Notification.findOne({ user: req.body.userId });
-        if (!userObject) {
+        let userObject = await Notification.findOne({ user: req.body.userId });
+        let user = await SuperAdmin.findById(req.body.userId);
+        if (!user) {
+            user = await Admin.findById(req.body.userId);
+        }
+        if (!user) {
+            user = await Manager.findById(req.body.userId);
+        }
+        if (!user) {
+            user = await TeamLeader.findById(req.body.userId);
+        }
+        if (!user) {
+            user = await User.findById(req.body.userId);
+        }
+        if (!userObject && user) {
             let createNew;
             if (req.body.designation === 'admin') {
                 createNew = await Notification({ user: req.body.userId, designation: req.body.designation, branches: req.body.branches });
@@ -25,11 +40,28 @@ export const fetchNotifications = async (req, res) => {
             })
         }
         else {
-            return res.status(200).json({
-                success: true,
-                message: 'fetched successfully',
-                userObject
-            })
+            if (user) {
+                if (req.body.designation === 'admin') {
+                    if (userObject?.branches.length !== req.body.branches.length) {
+                        userObject = await Notification.findByIdAndUpdate(userObject._id,
+                            { branches: req.body.branches },
+                            { new: true }
+                        )
+                    }
+                }
+                return res.status(200).json({
+                    success: true,
+                    message: 'fetched successfully',
+                    userObject
+                })
+            }
+            else {
+                return res.status(401).json({
+                    message: 'User not authenticated',
+                    success: false,
+                    notAuthorized: true
+                })
+            }
         }
     } catch (error) {
         console.log("while fetch notification", error);

@@ -276,6 +276,11 @@ export const updateUser = async (req, res) => {
 
                 if (!isSameBranches && req.body.branches.length > 0) {
 
+                    await TicketSettings.updateOne(
+                        { adminId: userId },
+                        { branches: req.body.branches }
+                    )
+
                     await Branch.updateMany(
                         { name: { $in: req.body.branches } },
                         { $set: { admin: req.body.username } }

@@ -6,7 +6,7 @@ export const isAuthenticated = async (req, res, next) => {
         // console.log('cookies', req.cookies);
         if (!token) {
             return res.status(401).json({
-                message: 'User not authenticated token',
+                message: 'User not authenticated',
                 success: false,
                 notAuthorized: true
             })
@@ -14,7 +14,7 @@ export const isAuthenticated = async (req, res, next) => {
         const decode = await jwt.verify(token, process.env.SECRET_KEY);
         if (!decode) {
             return res.status(401).json({
-                message: 'Invalid token decode',
+                message: 'Invalid token',
                 success: false,
                 notAuthorized: true
             })
@@ -23,7 +23,7 @@ export const isAuthenticated = async (req, res, next) => {
         next();
     } catch (error) {
         return res.status(401).json({
-            message: 'Authentication error catch',
+            message: 'Authentication error',
             success: false,
             notAuthorized: true
         });
