@@ -16,6 +16,10 @@ import URI from '../../utills';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import SessionEndWarning from '../../components/SessionEndWarning';
+import TicketStatusChart from '../../components/TicketStatusChart';
+import OpenTicketCategorization from '../../components/OpenTicketCategorization';
+import ReportBar from '../../components/ReportBar';
+import TicketCard from '../../components/TicketCard';
 
 function SuperAdminPanel({ user, view = 'overview' }) {
 
@@ -264,7 +268,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     const elapsed = now - new Date(createdAt).getTime(); // ms since created
 
     if (elapsed > tatInMs) {
-      return "TAT Over";
+      return "TAT_Over";
     } else {
       const remaining = tatInMs - elapsed;
       const mins = Math.floor((remaining / 1000 / 60) % 60);
@@ -305,6 +309,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
     if (percentElapsed >= 90) return "orange";
     if (percentElapsed >= 50) return "#aec81d";
     return "green";
+
   }
 
   const handleEditBranch = (branchId) => {
@@ -409,7 +414,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           headers: {
             'Content-Type': 'application/json'
           },
-        withCredentials: true
+          withCredentials: true
         }).then(res => {
           fetchAllTickets();
           handleCloseModal();
@@ -514,13 +519,12 @@ function SuperAdminPanel({ user, view = 'overview' }) {
   const renderOverviewView = () => (
     <>
       <div className="mb-4">
-        <h2 className="text-xl font-bold">System Overview</h2>
+        <h2 className="text-xl font-bold">Super Admin Dashboard</h2>
         <p className="text-muted">Complete overview of the ticketing system</p>
       </div>
 
       <div className="dashboard-grid">
-
-        <div className="stat-card" onClick={() => navigate('/dashboard/branches')}>
+        <div className="stat-card-1" onClick={() => navigate('/dashboard/branches')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Branches</h3>
             <div className="stat-card-icon blue">
@@ -531,19 +535,9 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           <div className="stat-card-value">{stats?.totalBranches}</div>
         </div>
 
-        {/* <div className="stat-card" navigate=''>
+        <div className="stat-card-2" onClick={() => navigate('/dashboard/admins')}>
           <div className="stat-card-header">
-            <h3 className="stat-card-title">Departments</h3>
-            <div className="stat-card-icon blue">
-              <FontAwesomeIcon icon={faBuilding} />
-            </div>
-          </div>
-          <div className="stat-card-value">{stats?.totalDepartments}</div>
-        </div> */}
-
-        <div className="stat-card" onClick={() => navigate('/dashboard/admins')}>
-          <div className="stat-card-header">
-            <h3 className="stat-card-title">Total Users</h3>
+            <h3 className="stat-card-title-1">Total Users</h3>
             <div className="stat-card-icon blue">
               <FontAwesomeIcon icon={faUser} />
               {/* <FaUsers /> */}
@@ -552,9 +546,9 @@ function SuperAdminPanel({ user, view = 'overview' }) {
           <div className="stat-card-value">{stats?.totalUsers}</div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/dashboard/tickets')}>
+        <div className="stat-card-3" onClick={() => navigate('/dashboard/tickets')}>
           <div className="stat-card-header">
-            <h3 className="stat-card-title">Total Tickets</h3>
+            <h3 className="stat-card-title-1">Total Tickets</h3>
             <div className="stat-card-icon orange">
               <FontAwesomeIcon icon={faTicketAlt} />
               {/* <FaTicketAlt /> */}
@@ -565,54 +559,45 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       </div>
 
       <div className="grid grid-2 gap-4 mt-4">
-        <div className="card" onClick={() => navigate('/dashboard/tickets')}>
-          <div className="card-header">
-            <h3>Ticket Status</h3>
-          </div>
-          <div className="card-body">
-            <div className="mb-4">
-              <h4 className="text-md font-medium mb-2">Open Tickets</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-warning rounded-full"
-                  style={{ width: `${(stats?.openTickets / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.openTickets} tickets</span>
-                <span className="text-sm">{Math.round((stats?.openTickets / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
+        {/* <div className="card">
+          <h2 className="status-title">Support Ticket Status</h2>
 
-            <div className="mb-4">
-              <h4 className="text-md font-medium mb-2">In Progress</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-primary rounded-full"
-                  style={{ width: `${((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets} tickets</span>
-                <span className="text-sm">{Math.round(((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100)}%</span>
+          <div className="status-row">
+            <div className="status-info">
+              <span className="status-dot yellow"></span>
+              <div>
+                <p className="status-label">Open Tickets</p>
+                <p className="ticket-count">0 tickets</p>
               </div>
             </div>
-
-            <div>
-              <h4 className="text-md font-medium mb-2">Resolved</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-success rounded-full"
-                  style={{ width: `${(stats?.resolvedTickets / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.resolvedTickets} tickets</span>
-                <span className="text-sm">{Math.round((stats?.resolvedTickets / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
+            <p className="status-percentage">0%</p>
           </div>
-        </div>
+
+          <div className="status-row">
+            <div className="status-info">
+              <span className="status-dot blue"></span>
+              <div>
+                <p className="status-label">In Progress</p>
+                <p className="ticket-count">0 tickets</p>
+              </div>
+            </div>
+            <p className="status-percentage">0%</p>
+          </div>
+
+          <div className="status-row">
+            <div className="status-info">
+              <span className="status-dot green"></span>
+              <div>
+                <p className="status-label">Resolved</p>
+                <p className="ticket-count">0 tickets</p>
+              </div>
+            </div>
+            <p className="status-percentage">0%</p>
+          </div>
+        </div> */}
+
+        <TicketStatusChart ticket={tickets} />
+        <OpenTicketCategorization openTickets={tickets?.filter(t => t?.status === 'open')} />
 
         <div className="card" onClick={() => navigate('/dashboard/branches')}>
           <div className="card-header">
@@ -632,7 +617,6 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                   </tr>
                 </thead>
                 <tbody>
-
                   {branches?.slice(0, 3).map(branch => {
                     const branchAdmin = allUsers?.find(a => a?.username === branch?.admin);
                     const branchDepartments = mockDepartments.filter(d => d.branchId === branch.id);
@@ -913,13 +897,53 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       )}
     </>
   );
+  const statusColor = {
+    open: '#faad14',
+    'in-progress': '#1890ff',
+    resolved: '#52c41a',
+  };
 
+  const statusBG = {
+    open: '#fff7e6',
+    'in-progress': '#e6f7ff',
+    resolved: '#f6ffed',
+  };
+
+  const priorityColor = {
+    high: '#dc3545',
+    medium: '#ffc107',
+    low: '#007bff',
+  };
+
+  const priorityBG = {
+    high: '#f8d7da',
+    medium: '#fff3cd',
+    low: '#cce5ff',
+  };
   const renderTicketsView = () => (
     <>
       <div className="mb-4">
         <h2 className="text-xl font-bold">All System Tickets</h2>
         <p className="text-muted">View and manage tickets across all branches</p>
       </div>
+
+      <ReportBar
+        reportData={tickets}
+        fetchData={async () => {
+          await fetchBranches();
+          await fetchAllTickets();
+          await fetchAllUsers();
+          await fetchDepartment();
+          // await fetchEditProfileRequest();
+          await fetchTicketSettings();
+          // await getAllRequests();
+
+        }}
+        setSearchTerm={() => {
+          setSearchTerm('');
+          setFilterStatus('all');
+        }}
+      />
 
       <div className="card mb-4">
         <div className="card-body">
@@ -960,43 +984,47 @@ function SuperAdminPanel({ user, view = 'overview' }) {
               <table className="table">
                 <thead>
                   <tr>
-                    {/* <th>ID</th> */}
+                    <th>S.No.</th>
+                    <th>Ticket ID</th>
                     <th>Title</th>
-                    {/* <th>Department</th> */}
                     <th>Branch</th>
+                    {/* <th>Created On</th> */}
+                    {/* <th>Assigned To</th> */}
                     <th>Status</th>
                     <th>Priority</th>
                     <th>T.A.T.</th>
-                    <th>Actions</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTickets?.map((ticket, index) => {
-                    return (
-                      ticket?.status === 'in-progress' &&
-                      <tr key={index + 1}>
-                        {/* <td>#{index + 1}</td> */}
-                        <td>{ticket?.subject}</td>
-                        {/* <td>{ticket?.department}</td> */}
-                        <td>{ticket?.branch}</td>
-                        <td>
-                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                            ticket?.status === 'in-progress' ? 'badge-primary' :
-                              'badge-success'
-                            }`}>
-                            {ticket?.status === 'in-progress' ? 'In Progress' :
-                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${ticket?.priority ===
-                            'high' ? 'badge-error' :
-                            ticket?.priority === 'medium' ? 'badge-warning' :
+                  {filteredTickets?.map((ticket, index) => (
+                    <tr key={ticket?._id}>
+                      <td style={{ textAlign: 'center' }}>{index + 1}</td>
+                      <td style={{ textAlign: 'center' }}>{ticket?.ticketId}</td>
+                      <td style={{ textAlign: 'center' }}>{ticket?.subject}</td>
+                      <td style={{ textAlign: 'center' }}>{ticket?.branch}</td>
+                      {/* <td style={{ textAlign: 'center' }}>{formatDate(ticket?.createdAt)}</td> */}
+                      {/* <td style={{ textAlign: 'center' }}>{ticket?.assignedTo}</td> */}
+                      <td>
+                        <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                          ticket?.status === 'in-progress' ? 'badge-primary' :
+                            'badge-success'
+                          }`}>
+                          {ticket?.status === 'in-progress' ? 'In Progress' :
+                            ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
+                        </span>
+                      </td>
+                      <td>
+                          <span className={`badge ${ticket.priority === 'high' ? 'badge-error' :
+                            ticket.priority === 'medium' ? 'badge-warning' :
                               'badge-primary'
                             }`}
-                            style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                            style={{
+                              background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color,
+                              color: parseInt(ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff',
+                            }}
                           >
-                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
+                            {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                           </span>
                         </td>
                         <td>
@@ -1004,180 +1032,32 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                             ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                            {ticket?.tat}
+                            {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                           </span>
                         </td>
-                        <td>
-                          <div className="flex gap-2" style={{ justifyContent: 'center' }}>
-                            {
-                              loading?.id === ticket?._id && loading?.status ? <button className={`btn btn-${ticket?.status === 'open' ? 'primary' : 'success'}`}>
-                                <img src="/img/loader.png" className='Loader' alt="loader" />
-                              </button>
-                                :
-                                <>
-                                  {ticket?.status !== 'resolved' && (
-                                    <>
-                                      {ticket?.status === 'open' && (
-                                        <button
-                                          className="btn btn-sm btn-primary"
-                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
-                                        >
-                                          Start
-                                        </button>
-                                      )}
-                                      {ticket?.status === 'in-progress' && (
-                                        <button
-                                          className="btn btn-sm btn-success"
-                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
-                                        >
-                                          Resolve
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                </>
-                            }
-                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)} >View</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredTickets?.map((ticket, index) => {
-                    return (
-                      ticket?.status === 'open' &&
-                      <tr key={index + 1}>
-                        {/* <td>#{index + 1}</td> */}
-                        <td>{ticket?.subject}</td>
-                        {/* <td>{ticket?.department}</td> */}
-                        <td>{ticket?.branch}</td>
-                        <td>
-                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                            ticket?.status === 'in-progress' ? 'badge-primary' :
-                              'badge-success'
-                            }`}>
-                            {ticket?.status === 'in-progress' ? 'In Progress' :
-                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${ticket?.priority ===
-                            'high' ? 'badge-error' :
-                            ticket?.priority === 'medium' ? 'badge-warning' :
-                              'badge-primary'
-                            }`}>
-                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                            ticket?.status === 'in-progress' ? 'badge-primary' :
-                              'badge-success'
-                            }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                            {ticket?.tat}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="flex gap-2">
-                            {
-                              loading?.id === ticket?._id && loading?.status ? <button className={`btn btn-${ticket?.status === 'open' ? 'primary' : 'success'}`}>
-                                <img src="/img/loader.png" className='Loader' alt="loader" />
-                              </button>
-                                :
-                                <>
-                                  {ticket?.status !== 'resolved' && (
-                                    <>
-                                      {ticket?.status === 'open' && (
-                                        <button
-                                          className="btn btn-sm btn-primary"
-                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
-                                        >
-                                          Start
-                                        </button>
-                                      )}
-                                      {ticket?.status === 'in-progress' && (
-                                        <button
-                                          className="btn btn-sm btn-success"
-                                          onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
-                                        >
-                                          Resolve
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                </>
-                            }
-                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)} >View</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredTickets?.map((ticket, index) => {
-                    return (
-                      ticket?.status === 'resolved' &&
-                      <tr key={index + 1}>
-                        {/* <td>#{index + 1}</td> */}
-                        <td>{ticket?.subject}</td>
-                        {/* <td>{ticket?.department}</td> */}
-                        <td>{ticket?.branch}</td>
-                        <td>
-                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                            ticket?.status === 'in-progress' ? 'badge-primary' :
-                              'badge-success'
-                            }`}>
-                            {ticket?.status === 'in-progress' ? 'In Progress' :
-                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${ticket?.priority ===
-                            'high' ? 'badge-error' :
-                            ticket?.priority === 'medium' ? 'badge-warning' :
-                              'badge-primary'
-                            }`}>
-                            {ticket?.priority?.charAt(0).toUpperCase() + ticket?.priority?.slice(1)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
-                            ticket?.status === 'in-progress' ? 'badge-primary' :
-                              'badge-success'
-                            }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                            {ticket?.tat}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="flex gap-2">
-                            {ticket?.status !== 'resolved' && (
-                              <>
-                                {ticket?.status === 'open' && (
-                                  <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')}
-                                  >
-                                    Start
-                                  </button>
-                                )}
-                                {ticket?.status === 'in-progress' && (
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}
-                                  >
-                                    Resolve
-                                  </button>
-                                )}
-                              </>
-                            )}
-                            <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)} >View</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      <td style={{ textAlign: 'center' }}>
+                        <div className="flex gap-2" style={{ justifyContent: 'center' }}>
+                          {ticket?.status === 'open' && (
+                            <button className="btn btn-sm btn-primary" onClick={() => handleUpdateTicketStatus(ticket?._id, 'in-progress')} >Start</button>
+                          )}
+                          {ticket?.status === 'in-progress' && (
+                            <button className="btn btn-sm btn-success" onClick={() => handleUpdateTicketStatus(ticket?._id, 'resolved')}>Resolve</button>
+                          )}
+                          <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                  }
+
+
                 </tbody>
               </table>
             </div>
+
+
+
+
           ) : (
             <div className="p-4 text-center">
               <p className="text-muted">No tickets found with the current filters.</p>
@@ -1240,19 +1120,47 @@ function SuperAdminPanel({ user, view = 'overview' }) {
       {/* Ticket Detail Modal */}
       {isModalOpen && selectedTicket && (
         <div className="modal-backdrop" onClick={handleCloseModal}>
-          <div className="modal">
+          <TicketCard selectedTicket={selectedTicket}
+            user={user}
+            formatDate={formatDate}
+            formatTime={formatTime}
+            formatTat={formatTat}
+            tatBG={tatBG}
+            ticketSettings={ticketSettings}
+            // department={department}
+            allUsers={allUsers}
+            myDept={myDept}
+            addCommentOnTicket={addCommentOnTicket}
+            // handlePriorityUpdate={handlePriorityUpdate}
+            // reAssignTicket={reAssignTicket}
+
+            // showPriorityUpdate={showPriorityUpdate}
+            // setShowPriorityUpdate={setShowPriorityUpdate}
+            // newPriority={newPriority}
+            // setNewPriority={setNewPriority}
+            isCommentOpen={isCommentOpen}
+            setIsCommentOpen={setIsCommentOpen}
+            // reAssignDiv={reAssignDiv}
+            // setReAssignDiv={setReAssignDiv}
+            // reAssignto={reAssignto}
+            // setReAssignto={setReAssignto}
+            comment={comment}
+            setComment={setComment}
+          />
+
+          {/* <div className="modal">
             <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="modal-content">
 
-                {/* Header */}
+                Header
                 <div className="modal-header">
-                  <h3 className="modal-title">Ticket #{selectedTicket?._id}</h3>
+                  <h3 className="modal-title">Ticket #{selectedTicket?.ticketId}</h3>
                   <button className="modal-close" onClick={handleCloseModal}>×</button>
                 </div>
 
                 <div className="modal-body space-y-6">
 
-                  {/* Section 1: Ticket Info */}
+                  Section 1: Ticket Info
                   <section className="space-y-2 border-b pb-4">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={{ float: 'left', display: 'flex', gap: '5px' }}>issuedby: <span style={{ fontWeight: 'bold' }} >{selectedTicket?.issuedby === user?.username ? 'You' : selectedTicket?.issuedby}</span > </span>
@@ -1280,22 +1188,21 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                     </div>
                   </section> <br />
                   <hr />
-                  {/* Section 2: User Info */}
+                  Section 2: User Info
                   <section className="space-y-2 border-b pb-4">
                     <h5 className="font-semibold">User Information</h5>
                     <div className="flex gap-4 flex-wrap text-sm" style={{ justifyContent: 'center' }}>
                       <span><strong>Name:</strong> {selectedTicket?.name}</span>
                       <span><strong>Mobile:</strong> {selectedTicket?.mobile}</span>
-                      {/* <span><strong>Email:</strong> {selectedTicket?.email}</span> */}
+                      
                     </div>
                   </section><br />
                   <hr />
 
-                  {/* Section 3: Department Info */}
+                  Section 3: Department Info
                   <section className="space-y-4 border-b pb-4">
                     <h5 className="font-semibold">Departments</h5>
                     {selectedTicket?.department?.map((curElem, index) => (
-                      // (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
                       <>
                         <div key={index} style={{ display: 'flex', gap: '5px' }}>
                           <span className="font-bold">{curElem?.name}{curElem?.description && ':'}</span>
@@ -1313,7 +1220,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                     ))}
                   </section>
                   <hr />
-                  {/* Section 4: Comments */}
+                  Section 4: Comments
                   {
                     selectedTicket?.comments?.length > 0 &&
                     <button
@@ -1349,23 +1256,9 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                     </>
                   }
 
-                  {/* Section 5: Reassign Ticket */}
-                  {/* <section className="space-y-2">
-                    <h5 className="font-semibold">ReAssign Ticket</h5>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
-                        <option value="" disabled>ReAssign the Ticket</option>
-                        {department?.map((curElem, index) => (
-                          user?.department !== curElem?.name && (
-                            <option key={index} value={curElem?.name}>{curElem?.name}</option>
-                          )
-                        ))}
-                      </select>
-                      <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
-                    </div>
-                  </section> */}
+                  
 
-                  {/* Section 6: Add Comment */}
+                  Section 6: Add Comment
 
                   <section className="space-y-2">
                     <label htmlFor="comment" className="form-label font-semibold">Add Comment</label>
@@ -1381,7 +1274,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
 
                 </div>
 
-                {/* Footer */}
+                Footer
                 <div className="modal-footer">
                   <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
                   <button className="btn btn-primary" onClick={addCommentOnTicket}>Add Comment</button>
@@ -1389,7 +1282,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
 
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       )}
     </div>

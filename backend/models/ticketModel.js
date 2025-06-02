@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const ticketSchema = new mongoose.Schema({
+    ticketId: String,
     name: String,
     subject: String,
     mobile: Number,
@@ -26,7 +27,8 @@ const ticketSchema = new mongoose.Schema({
                 default: Date.now
             }
         }
-    ]
+    ],
+    file: String
 }, { timestamps: true });
 
 const Tickets = new mongoose.model('Ticket', ticketSchema);

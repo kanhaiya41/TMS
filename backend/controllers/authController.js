@@ -12,10 +12,10 @@ import nodemailer from 'nodemailer';
 export const findUserForForgetPass = async (req, res) => {
     try {
         const email = req.params.email;
-        const designation = req.params.designation;
+        // const designation = req.params.designation;
         const existReq = await UserRequests.findOne({ email });
         if (existReq) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: 'Already Requested!',
                 existReq
@@ -23,19 +23,19 @@ export const findUserForForgetPass = async (req, res) => {
         }
         else {
             let user;
-            if (designation === 'superadmin') {
+            if (!user) {
                 user = await SuperAdmin.findOne({ email }).select('-password');
             }
-            else if (designation === 'admin') {
+            if (!user) {
                 user = await Admin.findOne({ email }).select('-password');
             }
-            else if (designation === 'Manager') {
+            if (!user) {
                 user = await Manager.findOne({ email }).select('-password');
             }
-            else if (designation === 'Team Leader') {
+            if (!user) {
                 user = await TeamLeader.findOne({ email }).select('-password');
             }
-            else {
+            if (!user) {
                 user = await User.findOne({ email }).select('-password');
             }
             if (!user) {
@@ -117,27 +117,27 @@ export const updateForgetPassword = async (req, res) => {
 
 export const login = async (req, res) => {
     try {
-        const { email, password, designation } = req.body;
-        if (!email || !password || !designation) {
+        const { email, password } = req.body;
+        if (!email || !password) {
             return res.status(401).json({
                 success: false,
                 message: 'something is missing,Please cheack!'
             });
         }
         let user;
-        if (designation === 'superadmin') {
+        if (!user) {
             user = await SuperAdmin.findOne({ email });
         }
-        else if (designation === 'admin') {
+        if (!user) {
             user = await Admin.findOne({ email });
         }
-        else if (designation === 'Manager') {
+        if (!user) {
             user = await Manager.findOne({ email });
         }
-        else if (designation === 'Team Leader') {
+        if (!user) {
             user = await TeamLeader.findOne({ email });
         }
-        else {
+        if (!user) {
             user = await User.findOne({ email });
         }
 

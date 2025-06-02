@@ -36,11 +36,11 @@ function Login() {
       if (!email) {
         toast.error('Please fill the Email field!');
       }
-      if (!designation) {
-        toast.error('Please Select the designation!');
-      }
+      // if (!designation) {
+      //   toast.error('Please Select the designation!');
+      // }
       else {
-        const res = await axios.get(`${URI}/auth/findemail/${email}/${designation}`, {
+        const res = await axios.get(`${URI}/auth/findemail/${email}`, {
           headers: {
             'Content-Type': 'application/json'
           }
@@ -164,7 +164,7 @@ function Login() {
     e.preventDefault();
     try {
       setLoading(true);
-      const res = await axios.post(`${URI}/auth/login`, { email: email, password: password, designation: designation }, {
+      const res = await axios.post(`${URI}/auth/login`, { email: email, password: password }, {
         headers: {
           'Content-Type': 'application/json'
         },
@@ -189,7 +189,6 @@ function Login() {
   }
 
   return (
-
     <>
       {
         passwordModel ?
@@ -294,7 +293,7 @@ function Login() {
                   />
                 </div>
 
-                <div className="form-group">
+                {/* <div className="form-group">
                   <label htmlFor="designation" className="form-label">Role</label>
                   <select onChange={(e) => setDesignation(e.target.value)} className="form-control" name="designation" id="designation">
                     <option value="" disabled selected>--Select Your Role--</option>
@@ -304,7 +303,7 @@ function Login() {
                     <option value="Team Leader">Team Leader</option>
                     <option value="Executive">Executive</option>
                   </select>
-                </div>
+                </div> */}
                 {
                   loading ? <button className="btn btn-primary btn-block">
                     <img src="/img/loader.png" className='Loader' alt="loader" />

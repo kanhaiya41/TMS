@@ -14,8 +14,12 @@ import { } from '@fortawesome/free-brands-svg-icons'
 import { faBell, faBuilding, faChartBar, faCommentDots, faEdit, faEye, faMoon, faUser } from '@fortawesome/free-regular-svg-icons'
 import { faBars, faChartLine, faGear, faLock, faSearch, faSignOut, faTicketAlt, faTimes, faTrash, faUserCog, faUsers, faUsersCog } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useNavigate } from 'react-router-dom';
+import { data, useNavigate } from 'react-router-dom';
 import SessionEndWarning from '../../components/SessionEndWarning';
+import TicketStatusChart from '../../components/TicketStatusChart';
+import OpenTicketCategorization from '../../components/OpenTicketCategorization';
+import ReportBar from '../../components/ReportBar';
+import TicketCard from '../../components/TicketCard';
 
 function AdminPanel({ view = 'departments' }) {
 
@@ -50,8 +54,10 @@ function AdminPanel({ view = 'departments' }) {
   const [loading, setLoading] = useState();
   const [loadingC, setLoadingC] = useState();
   const [loadingP, setLoadingP] = useState();
+  const [loadingTI, setLoadingTI] = useState();
   const [loadingCS, setLoadingCS] = useState();
   const [loadingPS, setLoadingPS] = useState();
+  const [loadingTIS, setLoadingTIS] = useState();
   const [sessionWarning, setSessionWarning] = useState(false);
 
   const [stats, setStats] = useState({
@@ -829,6 +835,7 @@ function AdminPanel({ view = 'departments' }) {
         }
       }).then(r => {
         setTicketSettings(r?.data?.ticketSettings);
+        console.log('ticket settings', r?.data?.ticketSettings);
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -857,6 +864,9 @@ function AdminPanel({ view = 'departments' }) {
   const [newPriority, setNewPriority] = useState({ name: '', color: '' });
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingPriority, setEditingPriority] = useState(null);
+  const [ticketId, setTicketId] = useState('');
+  const [editTicketId, setEditTicketId] = useState('');
+  const [editingTicketId, setEditingTicketId] = useState(null);
   const [tat, setTat] = useState({
     day: '',
     hour: '',
@@ -1110,8 +1120,6 @@ function AdminPanel({ view = 'departments' }) {
         fetchTicketSettings();
         toast.success(r.data.message);
       }
-
-
       ).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data) {
@@ -1128,6 +1136,104 @@ function AdminPanel({ view = 'departments' }) {
       console.log('while delete category', error);
     }
   };
+
+  const defineTicketId = async () => {
+    try {
+      setLoadingTI(true);
+      const res = await axios.post(`${URI}/admin/addticketsettings`, { ticketId: ticketId, adminId: user?._id, branches: user?.branches, },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      ).then(r => {
+        fetchTicketSettings();
+        setTicketId('');
+        toast.success(r?.data?.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while define ticket id');
+    }
+    finally {
+      setLoadingTI(false);
+    }
+  }
+
+  const handleUpdateTicketId = async () => {
+    if (!editTicketId.trim()) {
+      toast.error('Please fill the Ticket Id Field!');
+      return;
+    }
+    try {
+      setLoadingTIS(true);
+      const res = await axios.post(`${URI}/admin/updateticketsettings`, { adminId: user?._id, ticketId: editTicketId, branches: user?.branches }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchTicketSettings();
+        setEditTicketId(null);
+        toast.success(r.data.message);
+      }).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while updating ticket id', error);
+    }
+    finally {
+      setLoadingTIS(false);
+    }
+  }
+
+  const handleDeleteTicketId = async (ticketId) => {
+    try {
+      const res = await axios.post(`${URI}/admin/deleteticketsettings`, { adminId: ticketSettings?.adminId, ticketId }, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true
+      }).then(r => {
+        fetchTicketSettings();
+        toast.success(r.data.message);
+      }
+      ).catch(err => {
+        // Handle error and show toast
+        if (err.response && err.response.data) {
+          if (err.response.data.notAuthorized) {
+            setSessionWarning(true);
+          } else {
+            toast.error(err.response.data.message || "Something went wrong");
+          }
+        } else {
+          toast.error("Something went wrong");
+        }
+      });
+    } catch (error) {
+      console.log('while delete Ticket Id', error);
+    }
+  }
 
   const days = ['1 day', '2 days', '3 days', '4 days', '5 days', '6 days', '1 week', '2 week',];
   const hours = ['1 hour', '2 hours', '3 hours', '4 hours', '5 hours', '6 hours', '7 hours', '8 hours', '9 hours', '10 hours', '11 hours', '12 hours', '13 hours', '14 hours', '15 hours', '16 hours', '17 hours', '18 hours', '19 hours', '20 hours', '21 hours', '22 hours', '23 hours', '24 hours'];
@@ -1469,6 +1575,112 @@ function AdminPanel({ view = 'departments' }) {
             </div>
           </div>
         </div>
+
+        <div className="card">
+          <div className="card-header">
+            <h3>Branch Ticket Id</h3>
+          </div>
+          <div className="card-body">
+            {/* Add New Ticket Id Form */}
+            <div className="mb-4 p-3 bg-gray-100 rounded">
+              <h4 className="mb-2 font-medium">Define Ticket Id</h4>
+              <div className="form-group">
+
+                <input
+                  type="text"
+                  className="form-control mb-2"
+                  placeholder="Define Id"
+                  value={ticketId}
+                  onChange={(e) => setTicketId(e.target.value)}
+                />
+              </div>
+              {
+                loadingTI ? <button className="btn btn-primary mt-2">
+                  <img src="/img/loader.png" className='Loader' alt="loader" />
+                </button>
+                  :
+                  <button className="btn btn-primary mt-2" onClick={defineTicketId}>
+                    Submit
+                  </button>
+              }
+            </div>
+
+            {/* Show Ticket Id */}
+            <div className="space-y-3">
+
+              <div className="p-3 border rounded">
+                {editingTicketId ? (
+                  <div>
+                    <input
+                      type="text"
+                      className="form-control mb-2"
+                      value={editTicketId}
+                      onChange={(e) => setEditTicketId(e.target.value)}
+                    />
+
+                    <div className="flex gap-2">
+                      {
+                        loadingTIS ? <button className="btn btn-sm btn-primary">
+                          <img src="/img/loader.png" className='Loader' alt="loader" />
+                        </button>
+                          :
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={handleUpdateTicketId}
+                          >
+                            Save
+                          </button>
+                      }
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={() => setEditingTicketId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {
+                      ticketSettings?.ticketId &&
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-4 h-4 rounded"
+                            style={{
+                              // backgroundColor: priority?.color,
+                              padding: '5px 10px',
+                              borderRadius: '5px',
+                              // color: parseInt(priority?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff'
+                            }}
+                          >
+                            <span className="font-medium">{ticketSettings?.ticketId}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => setEditingTicketId(ticketSettings?.ticketId)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-sm btn-error"
+                            onClick={() => handleDeleteTicketId(ticketSettings?.ticketId)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  </>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
       </div>
     </>
   );
@@ -1476,7 +1688,7 @@ function AdminPanel({ view = 'departments' }) {
   const renderOverviewView = () => (
     <>
       <div className="mb-4">
-        <h2 className="text-xl font-bold">System Overview</h2>
+        <h2 className="text-xl font-bold">Admin Dashboard</h2>
         <p className="text-muted">Admin Overview of the Ticketing System</p>
       </div>
 
@@ -1492,7 +1704,7 @@ function AdminPanel({ view = 'departments' }) {
           <div className="stat-card-value">{stats?.totalDepartments}</div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/dashboard/leadership')}>
+        <div className="stat-card-1" onClick={() => navigate('/dashboard/leadership')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Total Users</h3>
             <div className="stat-card-icon green">
@@ -1503,7 +1715,7 @@ function AdminPanel({ view = 'departments' }) {
           <div className="stat-card-value">{stats?.totalUsers}</div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/dashboard/tickets')}>
+        <div className="stat-card-2" onClick={() => navigate('/dashboard/tickets')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Total Tickets</h3>
             <div className="stat-card-icon orange">
@@ -1514,7 +1726,7 @@ function AdminPanel({ view = 'departments' }) {
           <div className="stat-card-value">{stats?.totalTickets}</div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/dashboard/user-requests')}>
+        <div className="stat-card-3" onClick={() => navigate('/dashboard/user-requests')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Pending Requests</h3>
             <div className="stat-card-icon orange">
@@ -1528,54 +1740,10 @@ function AdminPanel({ view = 'departments' }) {
       </div>
 
       <div className="grid grid-2 gap-4 mt-4">
-        <div className="card" onClick={() => navigate('/dashboard/tickets')} >
-          <div className="card-header">
-            <h3>Ticket Status</h3>
-          </div>
-          <div className="card-body">
-            <div className="mb-4">
-              <h4 className="text-md font-medium mb-2">Open Tickets</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-warning rounded-full"
-                  style={{ width: `${(stats?.openTickets / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.openTickets} tickets</span>
-                <span className="text-sm">{Math.round((stats?.openTickets / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
 
-            <div className="mb-4">
-              <h4 className="text-md font-medium mb-2">In Progress</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-primary rounded-full"
-                  style={{ width: `${((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets} tickets</span>
-                <span className="text-sm">{Math.round(((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
+        <TicketStatusChart ticket={tickets} />
 
-            <div>
-              <h4 className="text-md font-medium mb-2">Resolved</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-success rounded-full"
-                  style={{ width: `${(stats?.resolvedTickets / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.resolvedTickets} tickets</span>
-                <span className="text-sm">{Math.round((stats?.resolvedTickets / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <OpenTicketCategorization openTickets={tickets?.filter(t => t?.status === 'open')} />
 
         <div className="card">
           <div className="card-header">
@@ -1618,6 +1786,9 @@ function AdminPanel({ view = 'departments' }) {
             </div>
           </div>
         </div>
+
+
+
       </div>
 
 
@@ -1691,16 +1862,16 @@ function AdminPanel({ view = 'departments' }) {
                       {filteredDepartments.map(dept => {
                         const tl = teamLeaders?.find(tl => tl?.username === dept?.teamleader);
                         return (
-                          <tr key={dept.id}>
+                          <tr key={dept.id}  >
                             <td className="font-medium">{dept?.name}</td>
                             <td>{dept?.branch}</td>
-                            <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <td >
                               {tl ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2" style={{ justifyContent: 'center' }} >
                                   <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   <span>{tl?.name}</span>
                                 </div>
-                              ) : <span className="text-muted">Not assigned</span>}
+                              ) : <span className="text-muted " >Not assigned</span>}
                             </td>
                             <td>{formatDate(dept.createdAt)}</td>
                             <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -1836,8 +2007,8 @@ function AdminPanel({ view = 'departments' }) {
                           {
                             // tl?.designation === "Team Leader" && tl?.branch === user?.branch &&
                             <tr key={tl.id}>
-                              <td style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <div className="flex items-center gap-2">
+                              <td>
+                                <div className="flex items-center gap-2" style={{ justifyContent: 'center' }}>
                                   <img className="user-avatar" src={tl?.profile ? tl?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   {/* <div className="user-avatar">{tl?.profile}</div> */}
                                   <span>{tl?.username}</span>
@@ -1902,7 +2073,7 @@ function AdminPanel({ view = 'departments' }) {
                             // m?.designation === "Manager" && m?.branch === user?.branch &&
                             < tr key={m.id}>
                               <td>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2" style={{ justifyContent: 'center' }}>
                                   <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   {/* <div className="user-avatar">{m?.profile}</div> */}
                                   <span>{m?.username}</span>
@@ -1966,7 +2137,7 @@ function AdminPanel({ view = 'departments' }) {
                             // m?.designation === "Manager" && m?.branch === user?.branch &&
                             < tr key={m.id}>
                               <td>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2" style={{ justifyContent: 'center' }}>
                                   <img className="user-avatar" src={m?.profile ? m?.profile : '/img/admin.png'} alt="/img/admin.png" />
                                   {/* <div className="user-avatar">{m?.profile}</div> */}
                                   <span>{m?.username}</span>
@@ -1980,7 +2151,7 @@ function AdminPanel({ view = 'departments' }) {
                                 <div className="flex gap-2">
                                   <button
                                     className="btn btn-sm btn-outline"
-                                    onClick={() => handleEditUser(m._id, 'Manager')}
+                                    onClick={() => handleEditUser(m._id, 'Executive')}
                                   >
                                     Edit
                                   </button>
@@ -2011,6 +2182,30 @@ function AdminPanel({ view = 'departments' }) {
       }
     </>
   );
+  const statusColor = {
+    open: '#faad14',
+    'in-progress': '#1890ff',
+    resolved: '#52c41a',
+  };
+
+  const statusBG = {
+    open: '#fff7e6',
+    'in-progress': '#e6f7ff',
+    resolved: '#f6ffed',
+  };
+
+  const priorityColor = {
+
+    high: '#dc3545',
+    medium: '#ffc107',
+    low: '#007bff',
+  };
+
+  const priorityBG = {
+    high: '#f8d7da',
+    medium: '#fff3cd',
+    low: '#cce5ff',
+  };
 
   const renderTicketsView = () => (
     <>
@@ -2018,6 +2213,24 @@ function AdminPanel({ view = 'departments' }) {
         <h2 className="text-xl font-bold">All Tickets</h2>
         <p className="text-muted">Manage tickets in {branch?.name || 'your organization'}</p>
       </div>
+
+      <ReportBar
+        reportData={tickets}
+        fetchData={async () => {
+          await fetchAllTeamLeaders();
+          await fetchAllTickets();
+          await fetchAllUsers();
+          await fetchDepartment();
+          await fetchEditProfileRequest();
+          await fetchTicketSettings();
+          await getAllRequests();
+          await fetchAllManagers();
+        }}
+        setSearchTerm={() => {
+          setSearchTerm('');
+          setFilterStatus('all');
+        }}
+      />
 
       <div className="card mb-4">
         <div className="card-body">
@@ -2059,10 +2272,11 @@ function AdminPanel({ view = 'departments' }) {
                 <thead>
                   <tr>
                     <th>Branch</th>
+                    <th>Subject</th>
                     <th>Status</th>
                     <th>Priority</th>
                     <th>T.A.T.</th>
-                    <th>Subject</th>
+
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -2074,17 +2288,18 @@ function AdminPanel({ view = 'departments' }) {
                       && ticket?.tat
                       && tatBG(ticket?.tat, ticket?.createdAt) === 'red' &&
                       // ticket?.status === 'in-progress' &&
-                      <tr key={index + 1}>
-                        {/* <td>#{index + 1}</td> */}
-                        <td>{ticket?.branch}</td>
-                        {/* <td>{ticket?.department}</td> */}
+                      <tr key={ticket?._id}>
+                        <td style={{ textAlign: 'center' }}>{ticket?.branch}</td>
+
+                        {/* <td style={{ textAlign: 'center' }}>{formatDate(ticket?.createdAt)}</td> */}
+                        <td style={{ textAlign: 'center' }}>{ticket?.subject}</td>
                         <td>
-                          <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
-                            ticket.status === 'in-progress' ? 'badge-primary' :
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`}>
-                            {ticket.status === 'in-progress' ? 'In Progress' :
-                              ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                            {ticket?.status === 'in-progress' ? 'In Progress' :
+                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
                           </span>
                         </td>
                         <td>
@@ -2092,8 +2307,10 @@ function AdminPanel({ view = 'departments' }) {
                             ticket.priority === 'medium' ? 'badge-warning' :
                               'badge-primary'
                             }`}
-                            style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
-
+                            style={{
+                              background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color,
+                              color: parseInt(ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff',
+                            }}
                           >
                             {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                           </span>
@@ -2103,34 +2320,12 @@ function AdminPanel({ view = 'departments' }) {
                             ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                            {ticket?.tat}
+                            {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                           </span>
                         </td>
-                        <td>
-                          {ticket?.subject}
-                        </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <div className="flex gap-2" style={{ justifyContent: 'center' }}>
-                            {/* {ticket.status !== 'resolved' && (
-                              <>
-                                {ticket.status === 'open' && (
-                                  <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
-                                  >
-                                    Start
-                                  </button>
-                                )}
-                                {ticket.status === 'in-progress' && (
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
-                                  >
-                                    Resolve
-                                  </button>
-                                )}
-                              </>
-                            )} */}
+
                             <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
                           </div>
                         </td>
@@ -2143,17 +2338,19 @@ function AdminPanel({ view = 'departments' }) {
                       ticket?.status !== 'resolved'
                       && ticket?.tat
                       && tatBG(ticket?.tat, ticket?.createdAt) !== 'red' &&
-                      <tr key={index + 1}>
+                      <tr key={ticket?._id}>
+                        <td style={{ textAlign: 'center' }}>{ticket?.branch}</td>
 
-                        <td>{ticket?.branch}</td>
-                        {/* <td>{ticket?.department}</td> */}
+                        <td style={{ textAlign: 'center' }}>{ticket?.subject}</td>
+                        {/* <td style={{ textAlign: 'center' }}>{formatDate(ticket?.createdAt)}</td> */}
+                        {/* <td style={{ textAlign: 'center' }}>{ticket?.assignedTo}</td> */}
                         <td>
-                          <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
-                            ticket.status === 'in-progress' ? 'badge-primary' :
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`}>
-                            {ticket.status === 'in-progress' ? 'In Progress' :
-                              ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                            {ticket?.status === 'in-progress' ? 'In Progress' :
+                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
                           </span>
                         </td>
                         <td>
@@ -2161,8 +2358,10 @@ function AdminPanel({ view = 'departments' }) {
                             ticket.priority === 'medium' ? 'badge-warning' :
                               'badge-primary'
                             }`}
-                            style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
-
+                            style={{
+                              background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color,
+                              color: parseInt(ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff',
+                            }}
                           >
                             {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                           </span>
@@ -2172,34 +2371,12 @@ function AdminPanel({ view = 'departments' }) {
                             ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                            {ticket?.tat}
+                            {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                           </span>
                         </td>
-                        <td>
-                          {ticket?.subject}
-                        </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <div className="flex gap-2" style={{ justifyContent: 'center' }}>
-                            {/* {ticket.status !== 'resolved' && (
-                              <>
-                                {ticket.status === 'open' && (
-                                  <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
-                                  >
-                                    Start
-                                  </button>
-                                )}
-                                {ticket.status === 'in-progress' && (
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
-                                  >
-                                    Resolve
-                                  </button>
-                                )}
-                              </>
-                            )} */}
+
                             <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
                           </div>
                         </td>
@@ -2209,17 +2386,19 @@ function AdminPanel({ view = 'departments' }) {
                   {filteredTickets?.map((ticket, index) => {
                     return (
                       ticket?.status === 'resolved' &&
-                      <tr key={index + 1}>
+                      <tr key={ticket?._id}>
+                        <td style={{ textAlign: 'center' }}>{ticket?.branch}</td>
 
-                        <td>{ticket?.branch}</td>
-                        {/* <td>{ticket?.department}</td> */}
+                        <td style={{ textAlign: 'center' }}>{ticket?.subject}</td>
+                        {/* <td style={{ textAlign: 'center' }}>{formatDate(ticket?.createdAt)}</td> */}
+                        {/* <td style={{ textAlign: 'center' }}>{ticket?.assignedTo}</td> */}
                         <td>
-                          <span className={`badge ${ticket.status === 'open' ? 'badge-warning' :
-                            ticket.status === 'in-progress' ? 'badge-primary' :
+                          <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
+                            ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
                             }`}>
-                            {ticket.status === 'in-progress' ? 'In Progress' :
-                              ticket.status?.charAt(0).toUpperCase() + ticket.status?.slice(1)}
+                            {ticket?.status === 'in-progress' ? 'In Progress' :
+                              ticket?.status?.charAt(0).toUpperCase() + ticket?.status?.slice(1)}
                           </span>
                         </td>
                         <td>
@@ -2227,7 +2406,10 @@ function AdminPanel({ view = 'departments' }) {
                             ticket.priority === 'medium' ? 'badge-warning' :
                               'badge-primary'
                             }`}
-                            style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                            style={{
+                              background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color,
+                              color: parseInt(ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff',
+                            }}
                           >
                             {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                           </span>
@@ -2236,35 +2418,13 @@ function AdminPanel({ view = 'departments' }) {
                           <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
                             ticket?.status === 'in-progress' ? 'badge-primary' :
                               'badge-success'
-                            }`} >
-                            {ticket?.tat}
+                            }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
+                            {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                           </span>
                         </td>
-                        <td>
-                          {ticket?.subject}
-                        </td>
-                        <td>
+                        <td style={{ textAlign: 'center' }}>
                           <div className="flex gap-2" style={{ justifyContent: 'center' }}>
-                            {/* {ticket.status !== 'resolved' && (
-                              <>
-                                {ticket.status === 'open' && (
-                                  <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'in-progress')}
-                                  >
-                                    Start
-                                  </button>
-                                )}
-                                {ticket.status === 'in-progress' && (
-                                  <button
-                                    className="btn btn-sm btn-success"
-                                    onClick={() => handleUpdateTicketStatus(ticket._id, 'resolved')}
-                                  >
-                                    Resolve
-                                  </button>
-                                )}
-                              </>
-                            )} */}
+
                             <button className="btn btn-sm btn-outline" onClick={() => handleViewTicket(ticket)}>View</button>
                           </div>
                         </td>
@@ -2363,7 +2523,7 @@ function AdminPanel({ view = 'departments' }) {
 
                             <td>
                               {/* {request?.status === 'pending' ? ( */}
-                              <div className="flex gap-2">
+                              <div className="flex gap-2" style={{ justifyContent: 'center' }}>
                                 <button
                                   className="btn btn-sm btn-success"
                                   onClick={() => handleEditUser(request?._id, request?.designation)}
@@ -2443,9 +2603,9 @@ function AdminPanel({ view = 'departments' }) {
                           request.status === 'pending' && request?.designation === 'Manager' &&
                           <tr key={request?.id} >
 
-                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                            <td>
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2" style={{ justifyContent: 'center' }}>
                                 <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
@@ -2509,9 +2669,9 @@ function AdminPanel({ view = 'departments' }) {
                           request.status === 'pending' && (request?.designation === 'Team Leader' || request?.designation === 'Executive') &&
                           <tr key={request?.id} >
 
-                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                            <td>
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2" style={{ justifyContent: 'center' }}>
                                 <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
@@ -2571,9 +2731,9 @@ function AdminPanel({ view = 'departments' }) {
                           request.status !== 'pending' &&
                           <tr key={request?.id} >
 
-                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                            <td >
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2" style={{ justifyContent: 'center' }}>
                                 <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
@@ -2693,19 +2853,46 @@ function AdminPanel({ view = 'departments' }) {
       {/* Ticket Detail Modal */}
       {isModalOpen && selectedTicket && (
         <div className="modal-backdrop" onClick={handleCloseModal}>
-          <div className="modal">
+          <TicketCard selectedTicket={selectedTicket}
+            user={user}
+            formatDate={formatDate}
+            formatTime={formatTime}
+            formatTat={formatTat}
+            tatBG={tatBG}
+            ticketSettings={ticketSettings}
+            // department={department}
+            allUsers={allUsers}
+            myDept={myDept}
+            addCommentOnTicket={addCommentOnTicket}
+            // handlePriorityUpdate={handlePriorityUpdate}
+            // reAssignTicket={reAssignTicket}
+
+            // showPriorityUpdate={showPriorityUpdate}
+            // setShowPriorityUpdate={setShowPriorityUpdate}
+            // newPriority={newPriority}
+            // setNewPriority={setNewPriority}
+            isCommentOpen={isCommentOpen}
+            setIsCommentOpen={setIsCommentOpen}
+            // reAssignDiv={reAssignDiv}
+            // setReAssignDiv={setReAssignDiv}
+            // reAssignto={reAssignto}
+            // setReAssignto={setReAssignto}
+            comment={comment}
+            setComment={setComment}
+          />
+          {/* <div className="modal">
             <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="modal-content">
 
-                {/* Header */}
+                Header
                 <div className="modal-header">
-                  <h3 className="modal-title">Ticket #{selectedTicket?._id}</h3>
+                  <h3 className="modal-title">Ticket #{selectedTicket?.ticketId}</h3>
                   <button className="modal-close" onClick={handleCloseModal}>×</button>
                 </div>
 
                 <div className="modal-body space-y-6">
 
-                  {/* Section 1: Ticket Info */}
+                  Section 1: Ticket Info
                   <section className="space-y-2 border-b pb-4">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={{ float: 'left', display: 'flex', gap: '5px' }}>issuedby: <span style={{ fontWeight: 'bold' }} >{selectedTicket?.issuedby === user?.username ? 'You' : selectedTicket?.issuedby}</span > </span>
@@ -2735,22 +2922,20 @@ function AdminPanel({ view = 'departments' }) {
                     </div>
                   </section> <br />
                   <hr />
-                  {/* Section 2: User Info */}
+                  Section 2: User Info
                   <section className="space-y-2 border-b pb-4">
                     <h5 className="font-semibold">User Information</h5>
                     <div className="flex gap-4 flex-wrap text-sm" style={{ justifyContent: 'center' }}>
                       <span><strong>Name:</strong> {selectedTicket?.name}</span>
                       <span><strong>Mobile:</strong> {selectedTicket?.mobile}</span>
-                      {/* <span><strong>Email:</strong> {selectedTicket?.email}</span> */}
                     </div>
                   </section><br />
                   <hr />
 
-                  {/* Section 3: Department Info */}
+                  Section 3: Department Info
                   <section className="space-y-4 border-b pb-4">
                     <h5 className="font-semibold">Departments</h5>
                     {selectedTicket?.department?.map((curElem, index) => (
-                      // (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
                       <>
                         <div key={index} style={{ display: 'flex', gap: '5px' }}>
                           <span className="font-bold">{curElem?.name}{curElem?.description && ':'}</span>
@@ -2768,7 +2953,7 @@ function AdminPanel({ view = 'departments' }) {
                     ))}
                   </section>
                   <hr />
-                  {/* Section 4: Comments */}
+                  Section 4: Comments
                   {
                     selectedTicket?.comments?.length > 0 &&
                     <button
@@ -2804,23 +2989,9 @@ function AdminPanel({ view = 'departments' }) {
                     </>
                   }
 
-                  {/* Section 5: Reassign Ticket */}
-                  {/* <section className="space-y-2">
-                    <h5 className="font-semibold">ReAssign Ticket</h5>
-                    <div className="flex gap-2 flex-wrap items-center">
-                      <select className="form-select" onChange={(e) => setReAssignto(e.target.value)} defaultValue="">
-                        <option value="" disabled>ReAssign the Ticket</option>
-                        {department?.map((curElem, index) => (
-                          user?.department !== curElem?.name && (
-                            <option key={index} value={curElem?.name}>{curElem?.name}</option>
-                          )
-                        ))}
-                      </select>
-                      <button className="btn btn-primary" onClick={reAssignTicket}>ReAssign</button>
-                    </div>
-                  </section> */}
+                  
 
-                  {/* Section 6: Add Comment */}
+                  Section 6: Add Comment
 
                   <section className="space-y-2">
                     <label htmlFor="comment" className="form-label font-semibold">Add Comment</label>
@@ -2836,7 +3007,7 @@ function AdminPanel({ view = 'departments' }) {
 
                 </div>
 
-                {/* Footer */}
+                Footer
                 <div className="modal-footer">
                   <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
                   <button className="btn btn-primary" onClick={addCommentOnTicket}>Add Comment</button>
@@ -2844,7 +3015,7 @@ function AdminPanel({ view = 'departments' }) {
 
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       )}
     </div>

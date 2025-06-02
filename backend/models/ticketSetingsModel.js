@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-
 const settingSchema = new mongoose.Schema({
     categories: [
         {
@@ -16,6 +15,7 @@ const settingSchema = new mongoose.Schema({
         }
     ],
     adminId: String,
+    ticketId: String,
     branches: Array
 });
 

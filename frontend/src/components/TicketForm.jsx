@@ -18,7 +18,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
     // time: initialData?.time || '',
     priority: initialData?.priority || ''
   });
-
+  const [file, setFile] = useState(null);
   const [formDepartment, setFormDepartment] = useState(initialData?.department || [])
   const [loading, setLoading] = useState(false);
 
@@ -81,8 +81,6 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
     });
   };
 
-
-
   //fetch department
   const [departments, setDepartments] = useState([]);
   const fetchDepartment = async () => {
@@ -92,7 +90,7 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
           'Content-Type': 'application/json'
         }
       }).then(res => {
-        setDepartments(res?.data?.departmentes)
+        setDepartments(res?.data?.departmentes?.filter(dept => dept?.branch === user?.branch))
       }).catch(err => {
         // Handle error and show toast
         if (err.response && err.response.data && err.response.data.message) {
@@ -201,20 +199,35 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
   };
 
   const handleSubmit = async (e) => {
+    const issuedby = `${user?.username}${user?.department ? ` - ${user.department}` : ''} (${user?.designation})`;
+
     e.preventDefault();
     try {
       setLoading(true);
       if (validateForm()) {
-        const payload = {
-          ...formData,
-          department: formDepartment,
-          issuedby: user?.username,
-          branch: user?.branch,
-          status: 'open',
-          tat: ticketSettings?.priorities?.find(pri => pri.name === formData?.priority).tat
-        };
+        const formdata = new FormData();
+        // alert(ticketSettings?.ticketId);
+        formdata.append('ticketId', ticketSettings?.ticketId);
+        formdata.append('name', formData?.name);
+        formdata.append('subject', formData?.subject);
+        formdata.append('mobile', formData?.mobile);
+        formdata.append('address', formData?.address);
+        formdata.append('priority', formData?.priority);
+        formdata.append('category', formData?.category);
+        formdata.append('department', JSON.stringify(formDepartment));
+        formdata.append('issuedby', issuedby);
+        formdata.append('branch', user?.branch);
+        formdata.append('status', 'open');
+        formdata.append('tat', ticketSettings?.priorities?.find(pri => pri.name === formData?.priority).tat);
+        formdata.append('file', file);
 
-        const res = await axios.post(`${URI}/executive/raiseticket`, payload, { withCredentials: true }).then(async r => {
+
+        const res = await axios.post(`${URI}/executive/raiseticket`, formdata, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          withCredentials: true
+        }).then(async r => {
           const notificationRes = await axios.post(`${URI}/notification/pushnotification`, { user: user?._id, branch: user?.branch, section: 'tickets', department: formDepartment },
             {
               headers: {
@@ -364,8 +377,6 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
                 <option value={curElem?.name}>{curElem?.name}</option>
               ))
             }
-
-
           </select>
         </div>
 
@@ -401,18 +412,36 @@ function TicketForm({ onCancel, initialData = null, fetchAllTickets }) {
 
         <div className="form-group">
           <label htmlFor="department" className="form-label">Department</label>
-          <div className='deptcheckbox'>
-            {
-              departments?.map(curElem => (
-                <>
-                  <p>{curElem?.name} <input value={curElem?.name} onChange={handleCheckboxChange} type="checkbox" /></p>
-                </>
-              ))
-            }
-          </div>
+          {
+            departments?.length > 0 ?
+              <div className='deptcheckbox'>
+                {
+                  departments?.map(curElem => (
+                    <>
+                      <p>{curElem?.name} <input value={curElem?.name} onChange={handleCheckboxChange} type="checkbox" /></p>
+                    </>
+                  ))
+                }
+              </div> :
+              'No Departments to Show'
+          }
         </div>
 
-        <br />
+        <div className="form-group">
+          <label htmlFor="" className="form-label"> Attachment : -</label>
+          <label htmlFor="profile" className='form-label' style={{ backgroundColor: 'rgba(35, 225, 232, 0.9)', color: "white", padding: '2%', borderRadius: '12px' }}>{file ? file?.name : 'Upload a file'}</label>
+          <input
+            type="file"
+            id="profile"
+            name="profile"
+            style={{ display: 'none' }}
+            className=''
+            // value={profile}
+            onChange={(e) => setFile(e.target.files[0])}
+            placeholder="Enter full name"
+          />
+          {errors.name && <div className="text-error text-sm mt-1">{errors.name}</div>}
+        </div>
 
 
         {formDepartment?.map((curElem, index) => (

@@ -15,6 +15,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import TicketForm from '../../components/TicketForm';
 import { useNavigate } from 'react-router-dom';
 import SessionEndWarning from '../../components/SessionEndWarning';
+import TicketStatusChart from '../../components/TicketStatusChart';
+import OpenTicketCategorization from '../../components/OpenTicketCategorization';
+import ReportBar from '../../components/ReportBar';
+import TicketCard from '../../components/TicketCard';
 
 function TeamLeaderPanel({ view = 'executives' }) {
 
@@ -439,10 +443,13 @@ function TeamLeaderPanel({ view = 'executives' }) {
   // Filter executives based on search term
   const filteredExecutives = allUsers?.filter(exec =>
     exec?.department === user?.department &&
-    exec?.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    exec?.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
-    exec?.address?.toLowerCase().includes(searchTerm?.toLowerCase())
+    (
+      exec?.username?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      exec?.email?.toLowerCase().includes(searchTerm?.toLowerCase()) ||
+      exec?.address?.toLowerCase().includes(searchTerm?.toLowerCase())
+    )
   );
+
 
   // Filter tickets based on status and search term
   const filteredTickets = tickets.filter(ticket => {
@@ -672,7 +679,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
   const renderOverviewView = () => (
     <>
       <div className="mb-4">
-        <h2 className="text-xl font-bold">System Overview</h2>
+        <h2 className="text-xl font-bold">Team Leader Dashboard</h2>
         <p className="text-muted">Admin Overview of the Ticketing System</p>
       </div>
 
@@ -689,7 +696,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           <div className="stat-card-value">{stats?.totalUsers}</div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/dashboard/tickets')}>
+        <div className="stat-card-1" onClick={() => navigate('/dashboard/tickets')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Total Tickets</h3>
             <div className="stat-card-icon orange">
@@ -700,7 +707,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           <div className="stat-card-value">{stats?.totalTickets}</div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/dashboard/user-requests')}>
+        <div className="stat-card-2" onClick={() => navigate('/dashboard/user-requests')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Pending Requests</h3>
             <div className="stat-card-icon orange">
@@ -711,7 +718,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
           <div className="stat-card-value">{stats?.pendingPasswordRequests}</div>
         </div>
 
-        <div className="stat-card" onClick={() => navigate('/dashboard/password-requests')}>
+        <div className="stat-card-3" onClick={() => navigate('/dashboard/password-requests')}>
           <div className="stat-card-header">
             <h3 className="stat-card-title">Password Requests</h3>
             <div className="stat-card-icon red">
@@ -724,54 +731,8 @@ function TeamLeaderPanel({ view = 'executives' }) {
       </div>
 
       <div className="grid grid-2 gap-4 mt-4">
-        <div className="card" onClick={() => navigate('/dashboard/tickets')} >
-          <div className="card-header">
-            <h3>Ticket Status</h3>
-          </div>
-          <div className="card-body">
-            <div className="mb-4">
-              <h4 className="text-md font-medium mb-2">Open Tickets</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-warning rounded-full"
-                  style={{ width: `${(stats?.openTickets / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.openTickets} tickets</span>
-                <span className="text-sm">{Math.round((stats?.openTickets / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <h4 className="text-md font-medium mb-2">In Progress</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-primary rounded-full"
-                  style={{ width: `${((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets} tickets</span>
-                <span className="text-sm">{Math.round(((stats?.totalTickets - stats?.openTickets - stats?.resolvedTickets) / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-md font-medium mb-2">Resolved</h4>
-              <div className="h-4 bg-gray-200 rounded-full">
-                <div
-                  className="h-4 bg-success rounded-full"
-                  style={{ width: `${(stats?.resolvedTickets / stats?.totalTickets) * 100}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm">{stats?.resolvedTickets} tickets</span>
-                <span className="text-sm">{Math.round((stats?.resolvedTickets / stats?.totalTickets) * 100)}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TicketStatusChart ticket={tickets} />
+        <OpenTicketCategorization openTickets={tickets?.filter(t => t?.status === 'open')} />
 
         <div className="card">
           <div className="card-header">
@@ -887,7 +848,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                         return (
                           <>
                             {
-                              // exec?.designation === 'Executive' && exec?.department === user?.department && exec?.branch === user?.branch &&
+                              exec?.department === user?.department &&
                               <tr key={exec?.id}>
                                 <td>
                                   <div className="flex items-center gap-2">
@@ -993,7 +954,23 @@ function TeamLeaderPanel({ view = 'executives' }) {
           Create Ticket
         </button>
       </div>
+      <ReportBar
+        reportData={tickets}
+        fetchData={async () => {
+          // await fetchAllTeamLeaders();
+          await fetchAllTickets();
+          await fetchAllUsers();
+          await fetchDepartment();
+          await fetchEditProfileRequest();
+          await fetchTicketSettings();
+          await getAllRequests();
 
+        }}
+        setSearchTerm={() => {
+          setSearchTerm('');
+          setFilterStatus('all');
+        }}
+      />
       <div className="card mb-4">
         <div className="card-body">
           <div className="grid grid-2 gap-3">
@@ -1086,7 +1063,10 @@ function TeamLeaderPanel({ view = 'executives' }) {
                               ticket.priority === 'medium' ? 'badge-warning' :
                                 'badge-primary'
                               }`}
-                              style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                              style={{
+                                background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color,
+                                color: parseInt(ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff',
+                              }}
                             >
                               {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                             </span>
@@ -1096,7 +1076,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                               ticket?.status === 'in-progress' ? 'badge-primary' :
                                 'badge-success'
                               }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                              {ticket?.tat}
+                              {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                             </span>
                           </td>
                           <td>
@@ -1160,7 +1140,10 @@ function TeamLeaderPanel({ view = 'executives' }) {
                               ticket.priority === 'medium' ? 'badge-warning' :
                                 'badge-primary'
                               }`}
-                              style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                              style={{
+                                background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color,
+                                color: parseInt(ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff',
+                              }}
                             >
                               {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                             </span>
@@ -1170,7 +1153,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                               ticket?.status === 'in-progress' ? 'badge-primary' :
                                 'badge-success'
                               }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                              {ticket?.tat}
+                              {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                             </span>
                           </td>
                           <td>
@@ -1230,7 +1213,10 @@ function TeamLeaderPanel({ view = 'executives' }) {
                               ticket.priority === 'medium' ? 'badge-warning' :
                                 'badge-primary'
                               }`}
-                              style={{ background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color }}
+                              style={{
+                                background: ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color,
+                                color: parseInt(ticketSettings?.priorities?.find(p => p?.name === ticket?.priority)?.color?.replace('#', ''), 16) > 0xffffff / 2 ? '#000' : '#fff',
+                              }}
                             >
                               {ticket.priority?.charAt(0).toUpperCase() + ticket.priority?.slice(1)}
                             </span>
@@ -1240,7 +1226,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                               ticket?.status === 'in-progress' ? 'badge-primary' :
                                 'badge-success'
                               }`} >
-                              {ticket?.tat}
+                              {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                             </span>
                           </td>
                           <td>
@@ -1363,7 +1349,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
                               <td>
                                 {/* {request?.status === 'pending' ? ( */}
-                                <div className="flex gap-2">
+                                <div className="flex gap-2" style={{justifyContent:'center'}}>
                                   <button
                                     className="btn btn-sm btn-success"
                                     onClick={() => handleEditUser(request?._id)}
@@ -1438,82 +1424,17 @@ function TeamLeaderPanel({ view = 'executives' }) {
                   </tr>
                 </thead>
                 <tbody>
+                  
                   {userRequest?.map((request, index) => {
                     return (
                       <>
                         {
-                          request.status === 'pending' && request?.designation === 'Team Leader' &&
-                          <tr key={request?.id} >
+                          request?.status === 'pending' && request?.designation === 'Executive' &&
+                          <tr key={request?._id} >
 
-                            <td style={{ display: 'flex', justifyContent: 'center' }}>
-
-                              <div className="flex items-center gap-2">
-                                <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
-                                <span>{request?.username}</span>
-                              </div>
-
-                            </td>
                             <td>
-                              {request?.designation}
-                            </td>
-                            <td> {
-                              request?.designation === 'Manager' ? '----' : request?.department ? request?.department : 'N/A'
-                            }
-                            </td>
-                            <td>{request?.reqto}</td>
-                            <td style={{ display: 'flex', justifyContent: 'center' }}>
-                              {/* {request?.status === 'pending' ? ( */}
-                              <div className="flex gap-2">
-                                {
-                                  loading?.id === request?._id && loading?.status ? <button className={`btn btn-${request?.status === 'open' ? 'primary' : 'success'}`}>
-                                    <img src="/img/loader.png" className='Loader' alt="loader" />
-                                  </button>
-                                    :
-                                    <>
-                                      {
-                                        request?.status === 'pending' ?
-                                          <>
-                                            <button
-                                              className="btn btn-sm btn-success"
-                                              onClick={() => statusUpdateforUserRequest(request?._id, 'allow', request?.email)}
-                                            >Accept
-                                            </button>
-                                            {/* <button
-                                              className="btn btn-sm btn-error"
-                                              onClick={() => deleteUpdateRequest(request?._id)}
-                                            >
-                                              Delete
-                                            </button> */}
-                                          </> :
-                                          'Accepted'
-                                        // <button
-                                        //   className="btn btn-sm btn-error"
-                                        // // onClick={() => deleteUpdateRequest(request?._id)}
-                                        // >
-                                        //   View
-                                        // </button>
-                                      }
-                                    </>
-                                }
-                              </div>
 
-                            </td>
-                          </tr>
-                        }
-
-                      </>
-                    );
-                  })}
-                  {userRequest?.map((request, index) => {
-                    return (
-                      <>
-                        {
-                          request.status === 'pending' && request?.designation === 'Executive' &&
-                          <tr key={request?.id} >
-
-                            <td style={{ display: 'flex', justifyContent: 'center' }}>
-
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2" style={{justifyContent:'center'}}>
                                 <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
@@ -1574,9 +1495,9 @@ function TeamLeaderPanel({ view = 'executives' }) {
                           request.status !== 'pending' &&
                           <tr key={request?.id} >
 
-                            <td style={{ display: 'flex', justifyContent: 'center' }}>
+                            <td >
 
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2" style={{justifyContent:'center'}}>
                                 <img src={request?.profile ? request?.profile : '/img/admin.png'} className='user-avatar' alt="/img/admin.png" />
                                 <span>{request?.username}</span>
                               </div>
@@ -1651,19 +1572,47 @@ function TeamLeaderPanel({ view = 'executives' }) {
       {/* Ticket Detail Modal */}
       {isModalOpen && selectedTicket && (
         <div className="modal-backdrop" onClick={handleCloseModal}>
-          <div className="modal">
+          <TicketCard selectedTicket={selectedTicket}
+            user={user}
+            formatDate={formatDate}
+            formatTime={formatTime}
+            formatTat={formatTat}
+            tatBG={tatBG}
+            ticketSettings={ticketSettings}
+            department={department}
+            allUsers={allUsers}
+            myDept={myDept}
+            addCommentOnTicket={addCommentOnTicket}
+            handlePriorityUpdate={handlePriorityUpdate}
+            reAssignTicket={reAssignTicket}
+
+            showPriorityUpdate={showPriorityUpdate}
+            setShowPriorityUpdate={setShowPriorityUpdate}
+            newPriority={newPriority}
+            setNewPriority={setNewPriority}
+            isCommentOpen={isCommentOpen}
+            setIsCommentOpen={setIsCommentOpen}
+            reAssignDiv={reAssignDiv}
+            setReAssignDiv={setReAssignDiv}
+            reAssignto={reAssignto}
+            setReAssignto={setReAssignto}
+            comment={comment}
+            setComment={setComment}
+          />
+
+          {/* <div className="modal">
             <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="modal-content">
 
-                {/* Header */}
+                Header
                 <div className="modal-header">
-                  <h3 className="modal-title">Ticket #{selectedTicket?._id}</h3>
+                  <h3 className="modal-title">Ticket #{selectedTicket?.ticketId}</h3>
                   <button className="modal-close" onClick={handleCloseModal}>×</button>
                 </div>
 
                 <div className="modal-body space-y-6">
 
-                  {/* Section 1: Ticket Info */}
+                  Section 1: Ticket Info
                   <section className="space-y-2 border-b pb-4">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={{ float: 'left', display: 'flex', gap: '5px' }}>issuedby: <span style={{ fontWeight: 'bold' }} >{selectedTicket?.issuedby === user?.username ? 'You' : selectedTicket?.issuedby}</span > </span>
@@ -1729,27 +1678,20 @@ function TeamLeaderPanel({ view = 'executives' }) {
                     )}
                   </section> <br />
                   <hr />
-                  {/* Section 2: User Info */}
+                  Section 2: User Info
                   <section className="space-y-2 border-b pb-4">
                     <h5 className="font-semibold">User Information</h5>
                     <div className="flex gap-4 flex-wrap text-sm" style={{ justifyContent: 'center' }}>
                       <span><strong>Name:</strong> {selectedTicket?.name}</span>
                       <span><strong>Mobile:</strong> {selectedTicket?.mobile}</span>
-                      {/* <span><strong>Email:</strong> {selectedTicket?.email}</span> */}
                     </div>
                   </section><br />
                   <hr />
 
-                  {/* Section 3: Department Info */}
+                  Section 3: Department Info
                   <section className="space-y-4 border-b pb-4">
                     <h5 className="font-semibold">Departments</h5>
-                    {/* {selectedTicket?.department?.map((curElem, index) => (
-                      (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
-                      <div key={index} style={{ display: 'flex', gap: '5px' }}>
-                        <h6 className="font-bold">{curElem?.name}{curElem?.description && ':'}</h6><p className="text-sm" style={{ wordBreak: 'break-word' }} >{curElem?.description}</p>
-
-                      </div>
-                    ))} */}
+                    
                     <div style={{ display: 'flex', gap: '5px' }}>
                       <span className="font-bold">
                         {myDept?.name}{myDept?.description && ':'}</span>
@@ -1766,7 +1708,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                     <p className="text-sm" style={{ wordBreak: 'break-word' }} >{myDept?.description}</p>
                   </section>
                   <hr />
-                  {/* Section 4: Comments */}
+                  Section 4: Comments
                   {
                     selectedTicket?.comments?.length > 0 &&
                     <button
@@ -1802,7 +1744,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
                     </>
                   }
 
-                  {/* Section 5: Reassign Ticket */}
+                  Section 5: Reassign Ticket
                   <section className="space-y-2">
                     <h5 className="btn btn-primary" onClick={() => setReAssignDiv(!reAssignDiv)} >ReAssign Ticket</h5>
                     {
@@ -1835,7 +1777,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
                   </section>
 
-                  {/* Section 6: Add Comment */}
+                  Section 6: Add Comment
 
                   <section className="space-y-2">
                     <label htmlFor="comment" className="form-label font-semibold">Add Comment</label>
@@ -1851,7 +1793,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
                 </div>
 
-                {/* Footer */}
+                Footer
                 <div className="modal-footer">
                   <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
                   <button className="btn btn-primary" onClick={() => addCommentOnTicket('', '')}>Add Comment</button>
@@ -1859,7 +1801,7 @@ function TeamLeaderPanel({ view = 'executives' }) {
 
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       )}
     </div>

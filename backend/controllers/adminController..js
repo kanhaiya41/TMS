@@ -397,6 +397,16 @@ export const deleteUser = async (req, res) => {
 
 export const createDepartment = async (req, res) => {
     try {
+        const existDept = await Department.findOne({
+            name: req.body.name,
+            branch: req.body.branch
+        });
+        if (existDept) {
+            return res.status(400).json({
+                success: false,
+                message: 'Department Already Exist!'
+            })
+        }
         const department = await Department(req.body);
         const saveDepartment = await department.save();
         if (req.body.teamleader) {
@@ -540,11 +550,11 @@ export const getExecutives = async (req, res) => {
 
 export const addTicketSettings = async (req, res) => {
     try {
-        const { categories, priorities, adminId } = req.body;
+        const { categories, priorities, adminId, ticketId } = req.body;
         const findObject = await TicketSettings.findOne({ adminId });
         if (!findObject) {
-            if (categories || priorities) {
-                const data = TicketSettings({ categories: categories || [], priorities: priorities || [], adminId: adminId, branches: req.body.branches });
+            if (categories || priorities || ticketId) {
+                const data = TicketSettings({ categories: categories || [], priorities: priorities || [], ticketId: ticketId || '', adminId: adminId, branches: req.body.branches });
                 const savedData = await data.save();
                 if (savedData) {
                     res.status(200).json({
@@ -567,6 +577,9 @@ export const addTicketSettings = async (req, res) => {
             }
             if (priorities) {
                 updateFields.priorities = [...findObject.priorities, priorities];
+            }
+            if (ticketId) {
+                updateFields.ticketId = ticketId;
             }
 
             if (Object.keys(updateFields).length > 0) {
@@ -603,7 +616,7 @@ export const getTicketSettings = async (req, res) => {
 
 export const updateTicketSettings = async (req, res) => {
     try {
-        const { adminId, categories, priorities, branches } = req.body;
+        const { adminId, categories, priorities, branches, ticketId } = req.body;
         const settingData = await TicketSettings.findOne({ adminId });
         let updation = false;
         if (categories) {
@@ -642,6 +655,13 @@ export const updateTicketSettings = async (req, res) => {
                 ); updation = true;
             }
         }
+        if (ticketId) {
+            await TicketSettings.updateOne(
+                { adminId: adminId },
+                { ticketId: ticketId }
+            );
+            updation = true;
+        }
         if (branches && branches !== settingData?.branches) {
             await TicketSettings.updateOne({ adminId }, { branches: branches });
             updation = true;
@@ -665,7 +685,7 @@ export const updateTicketSettings = async (req, res) => {
 
 export const deleteTicketSettings = async (req, res) => {
     try {
-        const { adminId, categories, priorities } = req.body;
+        const { adminId, categories, priorities, ticketId } = req.body;
         const settingData = await TicketSettings.findOne({ adminId });
         if (categories) {
             const deletedCategory = settingData.categories.filter(cat => cat._id.toString() !== categories);
@@ -681,6 +701,16 @@ export const deleteTicketSettings = async (req, res) => {
             return res.status(200).json({
                 success: true,
                 message: 'Priority Deleted!'
+            })
+        }
+        else if (ticketId) {
+            await TicketSettings.updateOne(
+                { adminId },
+                { $unset: { ticketId: 1 } }
+            );
+            return res.status(200).json({
+                success: true,
+                message: 'Ticket Id Deleted!'
             })
         }
     } catch (error) {

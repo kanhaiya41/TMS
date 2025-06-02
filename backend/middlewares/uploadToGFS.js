@@ -15,6 +15,9 @@ mongoose.connection.once('open', () => {
 
 export const upload = multer({
     storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 30 * 1024 * 1024, // ✅ 30 MB is a good sweet spot
+    },
 });
 
 export const uploadToGridFs = (req, res, next) => {

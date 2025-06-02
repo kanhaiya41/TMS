@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCommentDots } from '@fortawesome/free-regular-svg-icons';
 import SessionEndWarning from '../../components/SessionEndWarning';
+import ReportBar from '../../components/ReportBar';
+import TicketCard from '../../components/TicketCard';
 
 function ExecutivePanel({ user, view = 'tickets' }) {
   const [tickets, setTickets] = useState([]);
@@ -39,7 +41,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
     try {
       const data = `Priority changed from ${selectedTicket?.priority} to ${newPriority}`;
 
-      addCommentOnTicket(data,'');
+      addCommentOnTicket(data, '');
       const tat = ticketSettings?.priorities?.find(p => p.name === newPriority).tat;
       const res = await axios.post(`${URI}/executive/updatepriority`, { id: selectedTicket?._id, priority: newPriority, tat }, {
         headers: {
@@ -76,7 +78,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
       });
 
       const filtered = res?.data?.data?.filter(ticket =>
-        ticket?.issuedby === user?.username ||
+        ticket?.issuedby === `${user?.username}${user?.department ? ` - ${user.department}` : ''} (${user?.designation})` ||
         ticket?.department?.some(dept => dept?.users?.includes(user?.username))
       );
       setTickets(filtered);
@@ -281,7 +283,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
     try {
       if (reAssignto.name !== '') {
-        addCommentOnTicket(data,'');
+        addCommentOnTicket(data, '');
         const res = await axios.post(`${URI}/executive/ticketreassign`, { ticketId: selectedTicket?._id, presentDept: selectedTicket?.department, reAssignto: reAssignto }, { withCredentials: true })
           .then(res => {
             fetchAllTickets();
@@ -431,6 +433,24 @@ function ExecutivePanel({ user, view = 'tickets' }) {
         </button>
       </div>
 
+      <ReportBar
+        reportData={tickets}
+        fetchData={async () => {
+          // await fetchBranches();
+          await fetchAllTickets();
+          await fetchAllUsers();
+          await fetchDepartment();
+          // await fetchEditProfileRequest();
+          await fetchTicketSettings();
+          // await getAllRequests();
+
+        }}
+        setSearchTerm={() => {
+          setSearchTerm('');
+          setFilterStatus('all');
+        }}
+      />
+
       <div className="card mb-4">
         <div className="card-body">
           <div className="grid grid-2 gap-3">
@@ -491,7 +511,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                     </thead>
                     <tbody>
                       {filteredTickets?.map((ticket, index) => (
-                        ticket?.issuedby === user?.username &&
+                        ticket?.issuedby === `${user?.username}${user?.department ? ` - ${user.department}` : ''} (${user?.designation})` &&
                         <tr key={ticket?.id}>
                           <td>{ticket?.name}</td>
                           {/* <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
@@ -559,7 +579,6 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                             <tr key={ticket?.id}>
                               {/* <td>#{index + 1}</td> */}
                               <td>{ticket?.name}</td>
-
                               <td>
                                 <span className={`badge ${ticket?.status === 'open' ? 'badge-warning' :
                                   ticket?.status === 'in-progress' ? 'badge-primary' :
@@ -574,7 +593,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                                   ticket?.status === 'in-progress' ? 'badge-primary' :
                                     'badge-success'
                                   }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                                  {ticket?.tat}
+                                  {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                                 </span>
                               </td>
                               <td>
@@ -648,7 +667,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                                   ticket?.status === 'in-progress' ? 'badge-primary' :
                                     'badge-success'
                                   }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                                  {ticket?.tat}
+                                  {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                                 </span>
                               </td>
                               <td>
@@ -722,7 +741,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                                   ticket?.status === 'in-progress' ? 'badge-primary' :
                                     'badge-success'
                                   }`} style={{ background: ticket?.tat && tatBG(ticket?.tat, ticket?.createdAt) }}>
-                                  {ticket?.tat}
+                                  {ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt)}
                                 </span>
                               </td>
                               <td>
@@ -790,11 +809,39 @@ function ExecutivePanel({ user, view = 'tickets' }) {
       {/* Ticket Detail Modal */}
       {isModalOpen && selectedTicket && (
         <div className="modal-backdrop" onClick={handleCloseModal}>
-          <div className="modal">
+          <TicketCard selectedTicket={selectedTicket}
+            user={user}
+            formatDate={formatDate}
+            formatTime={formatTime}
+            formatTat={formatTat}
+            tatBG={tatBG}
+            ticketSettings={ticketSettings}
+            department={department}
+            allUsers={executives}
+            myDept={myDept}
+            addCommentOnTicket={addCommentOnTicket}
+            handlePriorityUpdate={handlePriorityUpdate}
+            reAssignTicket={reAssignTicket}
+
+            showPriorityUpdate={showPriorityUpdate}
+            setShowPriorityUpdate={setShowPriorityUpdate}
+            newPriority={newPriority}
+            setNewPriority={setNewPriority}
+            isCommentOpen={isCommentOpen}
+            setIsCommentOpen={setIsCommentOpen}
+            reAssignDiv={reAssignDiv}
+            setReAssignDiv={setReAssignDiv}
+            reAssignto={reAssignto}
+            setReAssignto={setReAssignto}
+            comment={comment}
+            setComment={setComment}
+          />
+
+          {/* <div className="modal">
             <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
               <div className="modal-content">
 
-                {/* Header */}
+                Header
                 <div className="modal-header">
                   <h3 className="modal-title">Ticket #{selectedTicket?._id}</h3>
                   <button className="modal-close" onClick={handleCloseModal}>×</button>
@@ -802,7 +849,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
                 <div className="modal-body space-y-6">
 
-                  {/* Section 1: Ticket Info */}
+                  Section 1: Ticket Info
                   <section className="space-y-2 border-b pb-4">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                       <span style={{ float: 'left', display: 'flex', gap: '5px' }}>issuedby: <span style={{ fontWeight: 'bold' }} >{selectedTicket?.issuedby === user?.username ? 'You' : selectedTicket?.issuedby}</span > </span>
@@ -869,27 +916,20 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                     )}
                   </section> <br />
                   <hr />
-                  {/* Section 2: User Info */}
+                  Section 2: User Info
                   <section className="space-y-2 border-b pb-4">
                     <h5 className="font-semibold">User Information</h5>
                     <div className="flex gap-4 flex-wrap text-sm" style={{ justifyContent: 'center' }}>
                       <span><strong>Name:</strong> {selectedTicket?.name}</span>
                       <span><strong>Mobile:</strong> {selectedTicket?.mobile}</span>
-                      {/* <span><strong>Email:</strong> {selectedTicket?.email}</span> */}
                     </div>
                   </section><br />
                   <hr />
 
-                  {/* Section 3: Department Info */}
+                  Section 3: Department Info
                   <section className="space-y-4 border-b pb-4">
                     <h5 className="font-semibold">Departments</h5>
-                    {/* {selectedTicket?.department?.map((curElem, index) => (
-                      (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
-                      <div key={index} style={{ display: 'flex', gap: '5px' }}>
-                        <h6 className="font-bold">{curElem?.name}{curElem?.description && ':'}</h6><p className="text-sm" style={{ wordBreak: 'break-word' }} >{curElem?.description}</p>
-
-                      </div>
-                    ))} */}
+                    
                     {
                       selectedTicket?.issuedby !== user?.username ?
                         <>
@@ -910,7 +950,6 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                         </> :
                         <>
                           {selectedTicket?.department?.map((curElem, index) => (
-                            // (selectedTicket?.issuedby === user?.username || curElem?.name === user?.department) &&
                             <>
                               <div key={index} style={{ display: 'flex', gap: '5px' }}>
                                 <span className="font-bold">{curElem?.name}{curElem?.description && ':'}</span>
@@ -931,7 +970,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
                   </section>
                   <hr />
-                  {/* Section 4: Comments */}
+                  Section 4: Comment
                   {
                     selectedTicket?.comments?.length > 0 &&
                     <button
@@ -967,7 +1006,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
                     </>
                   }
 
-                  {/* Section 5: Reassign Ticket */}
+                  Section 5: Reassign Ticket
                   <section className="space-y-2">
                     <h5 className="btn btn-primary" onClick={() => setReAssignDiv(!reAssignDiv)} >ReAssign Ticket</h5>
                     {
@@ -1000,7 +1039,7 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
                   </section>
 
-                  {/* Section 6: Add Comment */}
+                  Section 6: Add Comment
 
                   <section className="space-y-2">
                     <label htmlFor="comment" className="form-label font-semibold">Add Comment</label>
@@ -1016,15 +1055,15 @@ function ExecutivePanel({ user, view = 'tickets' }) {
 
                 </div>
 
-                {/* Footer */}
+                Footer
                 <div className="modal-footer">
                   <button className="btn btn-outline" onClick={handleCloseModal}>Close</button>
-                  <button className="btn btn-primary" onClick={() => addCommentOnTicket('','')}>Add Comment</button>
+                  <button className="btn btn-primary" onClick={() => addCommentOnTicket('', '')}>Add Comment</button>
                 </div>
 
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
         // <div className="modal-backdrop" onClick={handleCloseModal}>
         //   <div className="modal">

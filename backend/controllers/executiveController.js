@@ -4,55 +4,93 @@ import TeamLeader from "../models/teamLeaderModel.js";
 import Tickets from "../models/ticketModel.js";
 import nodemailer from 'nodemailer';
 import User from "../models/userModel.js";
+import TicketSettings from "../models/ticketSetingsModel.js";
 
 
 
 export const raiseTicket = async (req, res) => {
     try {
-        const data = await Tickets(req.body);
+        let imageUrl;
+        if (req.file) {
+            imageUrl = `https://tms-2bk0.onrender.com/file/${req.file.originalname}`;
+        }
+
+        const parsedDepartment = JSON.parse(req.body.department);
+
+        // STEP 1: Get ticket settings to find the prefix
+        const ticketSettings = await TicketSettings.findOne({ adminId: req.body.adminId });
+        const prefix = req?.body?.ticketId || 'TICKET'; // fallback
+
+        // STEP 2: Find the count of tickets with this prefix to generate number
+        const prefixRegex = new RegExp(`^${prefix}-\\d{3}$`);
+        const existingTickets = await Tickets.find({ ticketId: { $regex: prefixRegex } }).sort({ createdAt: -1 });
+
+        let nextNumber = 1;
+        if (existingTickets.length > 0 && typeof existingTickets[0]?.ticketId === 'string') {
+            const lastTicket = existingTickets[0].ticketId;
+            const parts = lastTicket.split('-');
+            if (parts.length === 2 && !isNaN(parseInt(parts[1]))) {
+                const lastNumber = parseInt(parts[1]);
+                nextNumber = lastNumber + 1;
+            }
+        }
+
+        const formattedTicketId = `${prefix}-${String(nextNumber).padStart(3, '0')}`;
+
+        // STEP 3: Save the ticket with generated ticket number
+        const data = new Tickets({
+            ...req.body,
+            department: parsedDepartment,
+            file: imageUrl,
+            ticketId: formattedTicketId
+        });
         const saveddata = await data.save();
 
         const ticketLength = await Tickets.countDocuments();
-        const updateBranch = await Branch.findOneAndUpdate({ name: req.body.branch }, { tickets: ticketLength })
-        if (saveddata) {
-            const deptNames = req.body.department.map(dep => dep.name);
+        await Branch.findOneAndUpdate({ name: req.body.branch }, { tickets: ticketLength });
 
+        if (saveddata) {
+            const deptNames = parsedDepartment.map(dep => dep.name);
             const emails = await TeamLeader.find({
                 branch: req.body.branch,
                 department: { $in: deptNames }
             });
+            const attachedFile = saveddata?.file;
 
-            const executiveUsernames = req.body.department.flatMap(dep => dep.users);
-
+            const executiveUsernames = parsedDepartment.flatMap(dep => dep.users);
             const executiveEmails = await User.find({
                 branch: req.body.branch,
                 username: { $in: executiveUsernames }
-            })
+            });
 
             const manageremail = await Manager.findOne({ branch: req.body.branch });
-            //set nodemailer transport
-            const transtporter = nodemailer.createTransport({
+
+            const transporter = nodemailer.createTransport({
                 service: 'gmail',
                 auth: {
                     user: process.env.USER_EMAIL,
                     pass: process.env.EMAIL_PASS
                 }
             });
+
             const mailBody = {
                 from: process.env.USER_EMAIL,
                 to: manageremail.email,
                 subject: 'New Ticket Raised in Your Branch',
-                html: `<p>Name: ${saveddata?.name} <br>
-                Subject: ${saveddata?.subject} <br>
-                Mobile: ${saveddata?.mobile} <br> 
-                Email Address: ${saveddata?.email} <br>
-                Priority: ${saveddata?.priority} <br>
-                ${saveddata.department.map(dept =>
-                    `${dept?.name} : ${dept?.description} <br>`
-                )}
+                html: `<p>Ticket ID: ${formattedTicketId} <br>
+                    Name: ${saveddata?.name} <br>
+                    Subject: ${saveddata?.subject} <br>
+                    Mobile: ${saveddata?.mobile} <br>
+                    Category: ${saveddata?.category} <br>
+                    Priority: ${saveddata?.priority} <br>
+                    T.A.T. : ${saveddata?.tat} <br>
+                    Raised By : ${saveddata?.issuedby} <br>
+                    ${saveddata.department.map(dept =>
+                    `${dept?.name} : ${dept?.description} <br>`).join('')}
+                    ${attachedFile ? `Attachment: <a href="${attachedFile}" target="_blank" rel="noopener noreferrer">View Attached File</a>` : ''}
                 </p>`
             };
-            await transtporter.sendMail(mailBody);
+            await transporter.sendMail(mailBody);
 
             await Promise.all(emails.map(async (curElem) => {
                 const mailBody = {
@@ -60,15 +98,19 @@ export const raiseTicket = async (req, res) => {
                     to: curElem.email,
                     subject: 'New Ticket Raised in Your Department',
                     html: `<p>
-                    Name: ${saveddata?.name} <br>
-                    Subject: ${saveddata?.subject} <br>
-                    Mobile: ${saveddata?.mobile} <br> 
-                    Email Address: ${saveddata?.email} <br>
-                    Priority: ${saveddata?.priority} <br>
-                    Description: ${saveddata?.department?.find(dept => dept?.name === curElem?.department)?.description || 'N/A'}
-                  </p>`,
+                        Ticket ID: ${formattedTicketId} <br>
+                        Name: ${saveddata?.name} <br>
+                        Subject: ${saveddata?.subject} <br>
+                        Mobile: ${saveddata?.mobile} <br>
+                        Category: ${saveddata?.category} <br>
+                        Priority: ${saveddata?.priority} <br>
+                        T.A.T. : ${saveddata?.tat} <br>
+                        Raised By : ${saveddata?.issuedby} <br>
+                        Description: ${saveddata?.department?.find(dept => dept?.name === curElem?.department)?.description || 'N/A'}
+                        ${attachedFile ? `Attachment: <a href="${attachedFile}" target="_blank" rel="noopener noreferrer">View Attached File</a>` : ''}
+                    </p>`,
                 };
-                await transtporter.sendMail(mailBody);
+                await transporter.sendMail(mailBody);
             }));
 
             await Promise.all(executiveEmails.map(async (curElem) => {
@@ -77,36 +119,40 @@ export const raiseTicket = async (req, res) => {
                     to: curElem.email,
                     subject: 'New Ticket Raised in Your Department',
                     html: `<p>
-                    Name: ${saveddata?.name} <br>
-                    Subject: ${saveddata?.subject} <br>
-                    Mobile: ${saveddata?.mobile} <br> 
-                    Email Address: ${saveddata?.email} <br>
-                    Priority: ${saveddata?.priority} <br>
-                    Description: ${saveddata?.department?.find(dept => dept?.name === curElem?.department)?.description || 'N/A'}
-                  </p>`,
+                        Ticket ID: ${formattedTicketId} <br>
+                        Name: ${saveddata?.name} <br>
+                        Subject: ${saveddata?.subject} <br>
+                        Mobile: ${saveddata?.mobile} <br>
+                        Category: ${saveddata?.category} <br>
+                        Priority: ${saveddata?.priority} <br>
+                        T.A.T. : ${saveddata?.tat} <br>
+                        Raised By : ${saveddata?.issuedby} <br>
+                        Description: ${saveddata?.department?.find(dept => dept?.name === curElem?.department)?.description || 'N/A'}
+                        ${attachedFile ? `Attachment: <a href="${attachedFile}" target="_blank" rel="noopener noreferrer">View Attached File</a>` : ''}
+                    </p>`,
                 };
-                await transtporter.sendMail(mailBody);
+                await transporter.sendMail(mailBody);
             }));
 
             return res.status(200).json({
                 success: true,
-                message: 'Ticket Raised Succssfull!😊'
+                message: 'Ticket Raised Successfully! 😊',
+                ticketNumber: formattedTicketId
             });
-        }
-        else {
+        } else {
             return res.status(400).json({
-                success: true,
-                message: 'error occure!🙏'
+                success: false,
+                message: 'Error occurred while saving ticket! 🙏'
             });
         }
     } catch (error) {
         console.log("while raising a ticket", error);
         res?.status(500).json({
             success: false,
-            message: `Error While Raising a Ticket Contact Admin`
-        })
+            message: `Error While Raising a Ticket. Contact Admin.`
+        });
     }
-}
+};
 
 export const getAllTickets = async (req, res) => {
     try {

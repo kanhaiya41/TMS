@@ -5,7 +5,7 @@ import { isAuthenticated } from '../middlewares/isAuthenticated.js';
 
 const app = express();
 
-app.get('/findemail/:email/:designation', findUserForForgetPass);
+app.get('/findemail/:email', findUserForForgetPass);
 app.post('/reqforupdatepassword', reqForUpdatePassword);
 app.post('/login', login);
 app.get('/logout', logout);
