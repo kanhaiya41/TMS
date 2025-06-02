@@ -128,7 +128,7 @@ const TicketCard = ({
         <div
             className="ticket-card bg-white rounded shadow p-4 space-y-4"
             style={{
-                position: "relative" ,
+                position: "relative",
                 backgroundColor: '#fff',
                 borderRadius: '12px',
                 padding: '16px',
@@ -142,7 +142,7 @@ const TicketCard = ({
         // **No onClick here that hides ticket!**
         >
             {/* Ticket ID & Status */}
-            
+
             <div className="flex justify-between items-center">
                 <div className="text-xl font-bold">#{selectedTicket?.ticketId}</div>
                 <div className="flex gap-2 flex-wrap">
@@ -324,6 +324,12 @@ const TicketCard = ({
                         </>
                 }
             </div>
+
+            {
+                selectedTicket?.file && <div>
+                    <a href={selectedTicket?.file}>View Attachment</a>
+                </div>
+            }
 
             {/* Comments */}
             {selectedTicket?.comments?.length > 0 && (

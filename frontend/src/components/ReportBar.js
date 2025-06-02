@@ -31,24 +31,35 @@ const ReportBar = ({ reportData, fetchData, setSearchTerm }) => {
 
     // Convert data to CSV string (flatten nested objects as JSON strings)
     const convertToCSV = (data) => {
-        if (!data.length) return "";
-        const headers = Object.keys(data[0]).join(",");
-        const rows = data.map((row) =>
-            Object.entries(row)
-                .map(([key, val]) => {
-                    if (key === "department" || key === "comments") {
-                        // Convert array of objects to JSON string for CSV export
-                        return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
-                    }
-                    if (typeof val === "object" && val !== null) {
-                        return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
-                    }
-                    return `"${val}"`;
-                })
-                .join(",")
-        );
-        return [headers, ...rows].join("\n");
-    };
+    if (!data.length) return "";
+
+    // Collect all unique keys from all objects to ensure no missing headers
+    const allKeys = Array.from(
+        new Set(data.flatMap(obj => Object.keys(obj)))
+    );
+
+    const headers = allKeys.join(",");
+
+    const rows = data.map(row =>
+        allKeys.map(key => {
+            const val = row[key];
+
+            // Handle nested objects/arrays properly
+            if (key === "department" || key === "comments" || key === "file") {
+                return `"${JSON.stringify(val || "").replace(/"/g, '""')}"`;
+            }
+
+            if (typeof val === "object" && val !== null) {
+                return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
+            }
+
+            return `"${val !== undefined ? val : ""}"`;
+        }).join(",")
+    );
+
+    return [headers, ...rows].join("\n");
+};
+
 
     // Download helper function
     const downloadFile = (content, fileName, type) => {
@@ -72,60 +83,84 @@ const ReportBar = ({ reportData, fetchData, setSearchTerm }) => {
         downloadFile(json, "report.json", "application/json");
     };
 
-    const exportPDF = async () => {
-        const { jsPDF } = await import("jspdf");
-        const doc = new jsPDF();
+const exportPDF = async () => {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF();
 
-        const title = "Report";
-        doc.text(title, 10, 10);
+    const title = "Report";
+    doc.text(title, 10, 10);
 
-        const headers = Object.keys(reportData[0]);
-        let y = 20;
+    // Collect all unique headers across all rows
+    const allHeaders = Array.from(new Set(reportData.flatMap(row => Object.keys(row))));
+    let y = 20;
 
-        reportData.forEach((row, index) => {
-            const lines = headers.map((h) => {
-                const val = row[h];
-                if (h === "department" || h === "comments") {
-                    // Format these arrays nicely in PDF with line breaks
-                    if (Array.isArray(val)) {
-                        return val
-                            .map((obj, i) => {
-                                const objText = Object.entries(obj)
-                                    .map(([k, v]) => {
-                                        if (Array.isArray(v)) {
-                                            return `${k}: [${v.join(", ")}]`;
-                                        } else {
-                                            return `${k}: ${v}`;
-                                        }
-                                    })
-                                    .join("\n");
-                                return objText + (i < val.length - 1 ? "\n---" : "");
-                            })
-                            .join("\n");
-                    }
-                    return "";
-                } else if (typeof val === "object" && val !== null) {
-                    return JSON.stringify(val);
-                } else {
-                    return val;
+    reportData.forEach((row) => {
+        const lines = allHeaders.map((h) => {
+            const val = row[h];
+
+            if (h === "department") {
+                // Format department array of objects nicely with line breaks
+                if (Array.isArray(val)) {
+                    return val
+                        .map((obj, i) => {
+                            const objText = Object.entries(obj)
+                                .map(([k, v]) => {
+                                    if (Array.isArray(v)) {
+                                        return `${k}: [${v.join(", ")}]`;
+                                    } else {
+                                        return `${k}: ${v}`;
+                                    }
+                                })
+                                .join("\n");
+                            return objText + (i < val.length - 1 ? "\n---" : "");
+                        })
+                        .join("\n");
                 }
-            });
-
-            const text = headers
-                .map((h, i) => `${h}: ${lines[i]}`)
-                .join("\n\n");
-
-            const splitText = doc.splitTextToSize(text, 180);
-            doc.text(splitText, 10, y);
-            y += splitText.length * 7 + 10;
-            if (y > 280) {
-                doc.addPage();
-                y = 10;
+                return "";
+            } 
+            else if (h === "comments") {
+                if (Array.isArray(val)) {
+                    return val
+                        .map(comment => {
+                            const createdAtFormatted = comment.createdAt
+                                ? new Date(comment.createdAt).toLocaleString()
+                                : "";
+                            return `Content: ${comment.content || ""}\nCommenter: ${comment.commenter || ""}\nCreated At: ${createdAtFormatted}`;
+                        })
+                        .join("\n---\n");
+                }
+                return "";
+            }
+            else if (h === "file") {
+                // file is a string, just print it
+                return val || "";
+            }
+            else if (typeof val === "object" && val !== null) {
+                return JSON.stringify(val);
+            } 
+            else {
+                return val || "";
             }
         });
 
-        doc.save("report.pdf");
-    };
+        const text = allHeaders
+            .map((h, i) => `${h}: ${lines[i]}`)
+            .join("\n\n");
+
+        const splitText = doc.splitTextToSize(text, 180);
+        doc.text(splitText, 10, y);
+        y += splitText.length * 7 + 10;
+
+        if (y > 280) {
+            doc.addPage();
+            y = 10;
+        }
+    });
+
+    doc.save("report.pdf");
+};
+
+
 
     return (
         <div

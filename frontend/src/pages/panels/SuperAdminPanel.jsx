@@ -733,7 +733,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                             <td>{branch.location}</td>
                             <td>
                               {branchAdmin ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2" style={{paddingLeft:'10%'}}>
                                   <img className="user-avatar" src={branchAdmin?.profile ? branchAdmin?.profile : '/img/admin.png'} alt="PF" />
                                   <span>{branchAdmin.name}</span>
                                 </div>
@@ -857,7 +857,7 @@ function SuperAdminPanel({ user, view = 'overview' }) {
                                 {/* <td>{adminBranch ? adminBranch.name : 'Not assigned'}</td> */}
                                 <td>{formatDate(admin.createdAt)}</td>
                                 <td>
-                                  <div className="flex gap-2">
+                                  <div className="flex gap-2" style={{justifyContent:'center'}}>
                                     <button
                                       className="btn btn-sm btn-outline"
                                       onClick={() => handleEditAdmin(admin._id)}
