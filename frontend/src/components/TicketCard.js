@@ -245,7 +245,7 @@ const TicketCard = ({
                 style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
-                    gap: '12px',
+                    // gap: '12px',
                     marginBottom: '16px'
                 }}
             >

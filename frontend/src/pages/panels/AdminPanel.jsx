@@ -1745,52 +1745,56 @@ function AdminPanel({ view = 'departments' }) {
 
         <OpenTicketCategorization openTickets={tickets?.filter(t => t?.status === 'open')} />
 
-        <div className="card">
-          <div className="card-header">
-            <h3>Branch Overview</h3>
-          </div>
-          <div className="card-body p-0">
-            <div className="table-responsive">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Branch</th>
-                    <th>Total Tickets</th>
-                    <th>Open Tickets</th>
-                    <th>Over Tat</th>
-                  </tr>
-                </thead>
-                <tbody onClick={() => navigate('/dashboard/tickets')}>
-                  {user?.branches?.map(dept => {
-                    // const deptTeamLeaders = teamLeaders?.filter(tl => tl?.department === dept?.name);
-                    const overTat = tickets?.filter(ticket => dept === ticket?.branch && ticket?.status !== 'resolved' && ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt) === 'TAT Over');
-                    const deptTotalTickets = tickets?.filter(t =>
-                      dept === t?.branch
-                    );
-                    const deptOpenTickets = tickets?.filter(t =>
-                      dept === t?.branch && t?.status === 'open'
-                    );
 
-                    return (
-                      <tr key={dept?._id}>
-                        <td>{dept}</td>
-                        <td>{deptTotalTickets?.length}</td>
-                        <td>{deptOpenTickets?.length}</td>
-                        <td style={{ color: 'red', fontWeight: 'bold' }}>{overTat?.length}</td>
 
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+
+
+      </div> <br />
+      <div className="card">
+        <div className="card-header">
+          <h3>Branch Overview</h3>
+        </div>
+        <div className="card-body p-0">
+          <div className="table-responsive">
+            <table className="table table-sm">
+              <thead>
+                <tr>
+                  <th>Branch</th>
+                  <th>Manager</th>
+                  <th>Total Tickets</th>
+                  <th>Open Tickets</th>
+                  <th>Over Tat</th>
+                </tr>
+              </thead>
+              <tbody onClick={() => navigate('/dashboard/tickets')}>
+                {user?.branches?.map(dept => {
+                  // const deptTeamLeaders = teamLeaders?.filter(tl => tl?.department === dept?.name);
+                  const overTat = tickets?.filter(ticket => dept === ticket?.branch && ticket?.status !== 'resolved' && ticket?.tat && formatTat(ticket?.tat, ticket?.createdAt) === 'TAT Over');
+                  const deptTotalTickets = tickets?.filter(t =>
+                    dept === t?.branch
+                  );
+                  const deptOpenTickets = tickets?.filter(t =>
+                    dept === t?.branch && t?.status === 'open'
+                  );
+
+                  const manager = managers?.find(man => man?.branch === dept);
+                  console.log(manager);
+                  return (
+                    <tr key={dept?._id}>
+                      <td>{dept}</td>
+                      <td>{manager ? manager?.name : 'Not Assigned'}</td>
+                      <td>{deptTotalTickets?.length}</td>
+                      <td>{deptOpenTickets?.length}</td>
+                      <td style={{ color: 'red', fontWeight: 'bold' }}>{overTat?.length}</td>
+
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
-
-
-
       </div>
-
 
     </>
   );
